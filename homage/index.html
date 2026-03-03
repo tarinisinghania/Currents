@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>4’33” (Digital Study)</title>
+<style>
+body {
+    margin: 0;
+    background: white;
+    color: black;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    transition: opacity 3s;
+}
+
+#startScreen {
+    text-align: center;
+    cursor: pointer;
+}
+
+#startScreen h1 {
+    font-weight: normal;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+#startScreen p {
+    font-size: 16px;
+    letter-spacing: 2px;
+}
+
+canvas {
+    display: none;
+}
+
+#endText {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 3s;
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+    <h1>4’33” (Digital Study)</h1>
+    <p>Click to Begin</p>
+</div>
+
+<canvas id="visualizer"></canvas>
+
+<div id="endText">The environment was the performance.</div>
+
+<script>
+const startScreen = document.getElementById("startScreen");
+const canvas = document.getElementById("visualizer");
+const ctx = canvas.getContext("2d");
+const endText = document.getElementById("endText");
+
+let audioContext;
+let analyser;
+let dataArray;
+let animationId;
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+startScreen.addEventListener("click", async () => {
+    startScreen.style.display = "none";
+    canvas.style.display = "block";
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const source = audioContext.createMediaStreamSource(stream);
+
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    draw();
+
+    // 4 minutes 33 seconds timer
+    setTimeout(endPerformance, 273000);
+});
+
+function draw() {
+    animationId = requestAnimationFrame(draw);
+
+    analyser.getByteFrequencyData(dataArray);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    const numCircles = 8; 
+    const spacing = 10;    
+
+    for (let i = 0; i < numCircles; i++) {
+ 
+        const startIdx = Math.floor((i / numCircles) * dataArray.length);
+        const endIdx = Math.floor(((i + 1) / numCircles) * dataArray.length);
+
+        let sum = 0;
+        for (let j = startIdx; j < endIdx; j++) {
+            sum += dataArray[j];
+        }
+
+        const average = sum / (endIdx - startIdx);
+        const radius = (i + 1) * spacing + average * 1.5;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,0,0,${0.3 + i * 0.1})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+}
+
+function endPerformance() {
+    cancelAnimationFrame(animationId);
+    document.body.style.opacity = "0";
+
+    setTimeout(() => {
+        canvas.style.display = "none";
+        endText.style.opacity = "1";
+        document.body.style.opacity = "1";
+    }, 3000);
+}
+</script>
+
+</body>
+</html>
