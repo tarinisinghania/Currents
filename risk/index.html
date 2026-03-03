@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Engage</title>
+
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url("beach.jpeg") center/cover no-repeat;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+}
+
+.start-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 10;
+    cursor: pointer;
+    transition: opacity 0.8s;
+}
+
+.start-screen h1 {
+    font-size: 48px;
+    margin: 0;
+}
+
+.start-screen p {
+    font-size: 22px;
+    margin-top: 15px;
+    letter-spacing: 2px;
+}
+
+.phone {
+    position: relative;
+    width: 520px;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+    overflow: hidden;
+    transition: opacity 1s, transform 1s;
+    z-index: 2;
+}
+
+.header {
+    padding: 20px;
+    font-weight: bold;
+    font-size: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    background: black;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.username {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.post-image img {
+    width: 100%;
+    height: 350px;
+    object-fit: cover;
+}
+
+.actions {
+    display: flex;
+    justify-content: space-around;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.likes, .caption, .comments {
+    padding: 15px 20px;
+    font-size: 15px;
+    transition: opacity 0.6s;
+}
+
+.caption span {
+    font-weight: bold;
+}
+
+.fade {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#final {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: white;
+    opacity: 0;
+    transition: opacity 2s;
+    pointer-events: none;
+    z-index: 3;
+}
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<div class="start-screen" id="start">
+    <h1>♥</h1>
+    <p>The more you click, the more you connect.</p>
+</div>
+
+<div class="phone" id="phone">
+    <div class="header removable">Coastal</div>
+
+    <div class="profile removable">
+        <div class="avatar"></div>
+        <div class="username">sea.silence</div>
+    </div>
+
+    <div class="post-image removable">
+        <img src="_.jpeg" alt="Post Image">
+    </div>
+
+    <div class="actions removable">
+        <div>♥ Like</div>
+        <div>💬 Comment</div>
+        <div>↗ Share</div>
+    </div>
+
+    <div class="likes removable">2,847 likes</div>
+
+    <div class="caption removable">
+        <span>sea.silence</span>  
+        The tide keeps arriving without asking who is watching.  
+        Salt in the air, sun on the surface, and everything moving slowly enough to feel it.
+    </div>
+
+    <div class="comments removable">View all 134 comments</div>
+</div>
+
+<div id="final">Nothing left to engage with.</div>
+
+<script>
+let phone = document.getElementById('phone');
+let finalMessage = document.getElementById('final');
+let startScreen = document.getElementById('start');
+
+let step = 0;
+let started = false;
+
+let removalOrder = [
+    ".likes",
+    ".comments",
+    ".caption",
+    ".actions",
+    ".post-image",
+    ".profile",
+    ".header"
+];
+
+startScreen.addEventListener('click', () => {
+    startScreen.style.opacity = 0;
+    setTimeout(() => startScreen.remove(), 800);
+    started = true;
+});
+
+
+document.body.addEventListener('click', () => {
+    if (!started) return;
+
+    if (step < removalOrder.length) {
+        let elements = document.querySelectorAll(removalOrder[step]);
+        elements.forEach(el => el.classList.add("fade"));
+        step++;
+    } else {
+        collapse();
+    }
+});
+
+function collapse() {
+    phone.style.opacity = 0;
+    phone.style.transform = "scale(0.95)";
+    document.body.style.background = "black";
+
+    setTimeout(() => {
+        finalMessage.style.opacity = 1;
+    }, 1000);
+
+    setTimeout(() => {
+        document.body.innerHTML = "";
+    }, 5000);
+}
+</script>
+
+</body>
+</html>
