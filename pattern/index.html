@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>US AQI Map</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+body{
+margin:0;
+font-family:sans-serif;
+}
+
+#map{
+height:100vh;
+width:100%;
+}
+
+#loading{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:28px;
+z-index:9999;
+font-family:sans-serif;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="loading">
+    <p>Loading location...</p>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const API_KEY = "aaead0615d3bce6af6bb4fd579ab3197eaaec612";
+
+// Initialize map
+const map = L.map('map').setView([25, 20], 2);
+
+// Map tiles
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:18
+}).addTo(map);
+
+
+// AQI color scale
+function getColor(aqi){
+
+if(aqi <= 50) return "green";
+if(aqi <= 100) return "yellow";
+return "red";
+
+}
+
+
+// Cities
+const cities = [
+
+{name:"New York", lat:40.7128, lon:-74.0060},
+{name:"Los Angeles", lat:34.0522, lon:-118.2437},
+{name:"Chicago", lat:41.8781, lon:-87.6298},
+{name:"Houston", lat:29.7604, lon:-95.3698},
+{name:"Phoenix", lat:33.4484, lon:-112.0740},
+{name:"Seattle", lat:47.6062, lon:-122.3321},
+{name:"Denver", lat:39.7392, lon:-104.9903},
+{name:"Miami", lat:25.7617, lon:-80.1918},
+
+{name:"Delhi", lat:28.6139, lon:77.2090},
+{name:"Raipur", lat:21.2167, lon:81.6167},
+{name:"Mumbai", lat:19.0760, lon:72.8777},
+{name:"Bangalore", lat:12.9716, lon:77.5946},
+{name:"Kolkata", lat:22.5726, lon:88.3639},
+{name:"Chennai", lat:13.0827, lon:80.2707},
+{name:"Hyderabad", lat:17.3850, lon:78.4867},
+{name:"Ahmedabad", lat:23.0225, lon:72.5714}
+
+];
+
+
+// Load AQI for cities
+cities.forEach(city => {
+
+fetch(`https://api.waqi.info/feed/geo:${city.lat};${city.lon}/?token=${API_KEY}`)
+.then(res => res.json())
+.then(data => {
+
+if(data.status !== "ok") return;
+
+const aqi = data.data.aqi;
+const color = getColor(aqi);
+
+L.circleMarker([city.lat, city.lon],{
+
+radius:10,
+color:color,
+fillColor:color,
+fillOpacity:0.8
+
+})
+.addTo(map)
+.bindPopup(`${city.name}<br>AQI: ${aqi}`);
+
+});
+
+});
+
+
+// Get user's location when page opens
+window.onload = function(){
+
+if(navigator.geolocation){
+
+navigator.geolocation.getCurrentPosition(
+
+function(position){
+
+const lat = position.coords.latitude;
+const lon = position.coords.longitude;
+
+document.getElementById("loading").style.display = "none";
+
+// center map on user
+map.setView([lat, lon], 6);
+
+// add pin
+L.marker([lat, lon])
+.addTo(map)
+.bindPopup("You are here")
+.openPopup();
+
+
+// AQI for user location
+fetch(`https://api.waqi.info/feed/geo:${lat};${lon}/?token=${API_KEY}`)
+.then(res => res.json())
+.then(data => {
+
+if(data.status !== "ok") return;
+
+const aqi = data.data.aqi;
+const color = getColor(aqi);
+
+L.circleMarker([lat, lon],{
+
+radius:12,
+color:color,
+fillColor:color,
+fillOpacity:0.9
+
+})
+.addTo(map)
+.bindPopup(`Your Location<br>AQI: ${aqi}`);
+
+});
+
+},
+
+function(error){
+console.log(error);
+},
+
+{
+enableHighAccuracy: false,
+timeout: 5000,
+maximumAge: 6000
+}
+
+);
+}}
+
+</script>
+</body>
+</html>
