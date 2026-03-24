@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Weight of Holding Silence</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper: #f0ece2;
+  --ink: #1c1916;
+  --ink2: rgba(28,25,22,0.38);
+  --ink3: rgba(28,25,22,0.13);
+  --accent: #7a5c38;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'EB Garamond', serif;
+  overflow: hidden;
+  user-select: none;
+  cursor: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#cursor {
+  position: fixed;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--ink);
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: width 0.25s, height 0.25s, background 0.25s;
+  will-change: transform;
+}
+#cursor.pressing {
+  width: 32px; height: 32px;
+  background: rgba(28,25,22,0.07);
+}
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+.screen.active { opacity: 1; pointer-events: all; }
+
+/* ── TITLE ── */
+#title-screen { gap: 0.25rem; }
+
+.t-line {
+  font-size: clamp(42px, 8.5vw, 108px);
+  font-weight: 400;
+  line-height: 0.96;
+  letter-spacing: -0.025em;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+.t-line.italic { font-style: italic; color: var(--accent); }
+.t-line.show { opacity: 1; transform: none; }
+
+.t-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  margin-top: 2.5rem;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.t-sub.show { opacity: 1; }
+
+.begin-area {
+  margin-top: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  opacity: 0;
+  transition: opacity 1s ease;
+  cursor: none;
+}
+.begin-area.show { opacity: 1; }
+
+.begin-ring-wrap {
+  width: 64px; height: 64px;
+  position: relative;
+  cursor: none;
+}
+.begin-ring-wrap svg { overflow: visible; }
+.begin-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink2);
+}
+
+/* ── GLYPH SCREEN ── */
+#glyph-screen { gap: 0; }
+
+.top-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 1.75rem 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mov-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  transition: opacity 0.4s;
+}
+
+.progress-dots { display: flex; gap: 8px; align-items: center; }
+.pdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  border: 0.5px solid var(--ink2);
+  transition: background 0.5s, border-color 0.5s;
+}
+.pdot.done { background: var(--ink); border-color: var(--ink); }
+.pdot.current { border-color: var(--ink); }
+
+.stage {
+  width: min(320px, 78vmin);
+  height: min(320px, 78vmin);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: none;
+}
+
+#glyph-svg { overflow: visible; }
+
+/* Hold ring around stage */
+.ring-frame {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+
+.instr {
+  font-style: italic;
+  font-size: clamp(16px, 2.4vw, 22px);
+  color: var(--ink2);
+  text-align: center;
+  max-width: 32ch;
+  line-height: 1.5;
+  margin-top: 2.8rem;
+  min-height: 2.5em;
+  transition: color 0.5s, opacity 0.4s;
+  cursor: none;
+}
+.instr.live { color: var(--ink); }
+
+.bottom-hint {
+  position: fixed;
+  bottom: 2.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  transition: opacity 0.5s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── END SCREEN ── */
+#end-screen { gap: 1.2rem; }
+.end-h {
+  font-size: clamp(28px, 5.5vw, 68px);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.015em;
+  text-align: center;
+  line-height: 1.15;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 1s, transform 1s;
+}
+.end-h.show { opacity: 1; transform: none; }
+.end-s {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  opacity: 0;
+  transition: opacity 1s 0.5s;
+}
+.end-s.show { opacity: 1; }
+.again-btn {
+  margin-top: 2rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  border: 0.5px solid var(--ink2);
+  padding: 0.75rem 2.2rem;
+  cursor: none;
+  background: none;
+  opacity: 0;
+  transition: opacity 1s 1s, color 0.3s, border-color 0.3s;
+}
+.again-btn.show { opacity: 1; }
+.again-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+/* ── WIPE ── */
+#wipe {
+  position: fixed; inset: 0;
+  background: var(--ink);
+  z-index: 1000;
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 0.42s cubic-bezier(0.7,0,0.3,1);
+}
+#wipe.in  { transform: scaleY(1); transform-origin: bottom; }
+#wipe.out { transform: scaleY(0); transform-origin: top;    }
+
+/* complete flash */
+@keyframes flashBg {
+  0%  { background: var(--paper); }
+  30% { background: rgba(122,92,56,0.1); }
+  100%{ background: var(--paper); }
+}
+.flash { animation: flashBg 0.8s ease; }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<!-- ── TITLE ── -->
+<div class="screen active" id="title-screen">
+  <div class="t-line" id="tl1">The Weight</div>
+  <div class="t-line italic" id="tl2">of Holding</div>
+  <div class="t-line" id="tl3">Silence</div>
+  <p class="t-sub" id="tsub">A graphic score — nine movements</p>
+  <div class="begin-area" id="begin-area">
+    <div class="begin-ring-wrap" id="begin-ring-wrap">
+      <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="24" fill="none" stroke="rgba(28,25,22,0.18)" stroke-width="0.8"/>
+        <circle cx="32" cy="32" r="8" fill="none" stroke="rgba(28,25,22,0.35)" stroke-width="0.8"
+          id="begin-inner" style="transition: r 0.3s"/>
+        <circle id="begin-fill" cx="32" cy="32" r="0" fill="rgba(28,25,22,0.12)"/>
+        <circle cx="32" cy="32" r="3" fill="#1c1916"/>
+        <circle id="begin-prog" cx="32" cy="32" r="24"
+          fill="none" stroke="#1c1916" stroke-width="1.2"
+          stroke-dasharray="150.8" stroke-dashoffset="150.8"
+          stroke-linecap="round"
+          transform="rotate(-90 32 32)"/>
+      </svg>
+    </div>
+    <span class="begin-label" id="begin-label">Hold to begin</span>
+  </div>
+</div>
+
+<!-- ── GLYPH ── -->
+<div class="screen" id="glyph-screen">
+  <div class="top-bar">
+    <span class="mov-label" id="mov-label">I — Gathering</span>
+    <div class="progress-dots" id="pdots"></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <svg id="glyph-svg" width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" overflow="visible"></svg>
+    <svg class="ring-frame" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+      <circle id="hold-ring" cx="180" cy="180" r="160"
+        fill="none" stroke="rgba(28,25,22,0.2)" stroke-width="1"
+        stroke-dasharray="1005" stroke-dashoffset="1005"
+        stroke-linecap="round"
+        transform="rotate(-90 180 180)"/>
+    </svg>
+  </div>
+
+  <p class="instr" id="instr">–</p>
+  <div class="bottom-hint" id="bottom-hint">Press and hold anywhere</div>
+</div>
+
+<!-- ── END ── -->
+<div class="screen" id="end-screen">
+  <div class="end-h" id="end-h">You are where<br>you began.</div>
+  <p class="end-s" id="end-s">The score is complete.</p>
+  <button class="again-btn" id="again-btn">Begin again</button>
+  <svg width="52" height="52" viewBox="0 0 52 52" style="margin-top:2.5rem;opacity:0.22" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="26" cy="26" r="22" fill="none" stroke="#1c1916" stroke-width="0.5"/>
+    <circle cx="26" cy="26" r="14" fill="none" stroke="#1c1916" stroke-width="0.5"/>
+    <circle cx="26" cy="26" r="6"  fill="none" stroke="#1c1916" stroke-width="0.5"/>
+    <circle cx="26" cy="26" r="2"  fill="#1c1916"/>
+  </svg>
+</div>
+
+<div id="wipe"></div>
+
+<script>
+// ── CURSOR ──
+const cur = document.getElementById('cursor');
+let mx = -100, my = -100;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cur.style.left = mx + 'px';
+  cur.style.top  = my + 'px';
+});
+
+// ── SVG HELPERS ──
+const NS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+}
+function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; } // easeInOut
+
+// ── GLYPHS ──
+const GLYPHS = [
+  {
+    mov: 'I — Gathering',
+    instr: 'Hold your breath. Hold until the circle is full.',
+    done: 'Release.',
+    draw(svg, p) {
+      const ep = ease(p);
+      svg.appendChild(s('circle', {cx:150,cy:150,r:110,fill:'none',stroke:'rgba(28,25,22,0.12)','stroke-width':'0.7'}));
+      // Expanding fill
+      svg.appendChild(s('circle', {cx:150,cy:150,r:lerp(0,110,ep),fill:'rgba(28,25,22,0.11)'}));
+      // Breathing ring at edge
+      if (p > 0.1) {
+        const rr = lerp(0, 110, ep);
+        svg.appendChild(s('circle', {cx:150,cy:150,r:rr,fill:'none',stroke:'rgba(28,25,22,0.28)','stroke-width': lerp(0,1.5,ep)}));
+      }
+      // Center dot shrinks
+      svg.appendChild(s('circle', {cx:150,cy:150,r:lerp(7,3,ep),fill:'#1c1916'}));
+      // Radial ticks appear at end
+      if (p > 0.7) {
+        const tp = (p - 0.7) / 0.3;
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          const r1 = 112, r2 = 112 + lerp(0, 10, tp);
+          svg.appendChild(s('line', {
+            x1: 150+Math.cos(a)*r1, y1: 150+Math.sin(a)*r1,
+            x2: 150+Math.cos(a)*r2, y2: 150+Math.sin(a)*r2,
+            stroke: '#1c1916', 'stroke-width': 0.7, opacity: lerp(0, 0.5, tp)
+          }));
+        }
+      }
+    }
+  },
+  {
+    mov: 'I — Gathering',
+    instr: 'Extend your attention. Hold through the gap. Let the far end dissolve.',
+    done: 'Let go.',
+    draw(svg, p) {
+      const ep = ease(p);
+      // Left solid line grows
+      const leftLen = lerp(0, 100, Math.min(1, p * 2));
+      svg.appendChild(s('line', {x1:50,y1:150,x2:50+leftLen,y2:150,stroke:'#1c1916','stroke-width':'1.5','stroke-linecap':'round'}));
+      // Gap dot
+      if (p > 0.3) {
+        const gp = Math.min(1, (p-0.3)/0.3);
+        svg.appendChild(s('circle', {cx:150,cy:150,r:lerp(0,9,gp),fill:'none',stroke:'rgba(28,25,22,0.45)','stroke-width':'0.8'}));
+      }
+      // Right dashed fades in then out
+      if (p > 0.5) {
+        const rp = (p - 0.5) / 0.5;
+        const fadeOut = p > 0.8 ? 1 - (p-0.8)/0.2 : 1;
+        svg.appendChild(s('line', {x1:160,y1:150,x2:250,y2:150,stroke:'#1c1916','stroke-width':'0.6','stroke-linecap':'round','stroke-dasharray':'5 7',opacity: lerp(0,0.7,rp)*fadeOut}));
+      }
+    }
+  },
+  {
+    mov: 'I — Gathering',
+    instr: 'Lower slowly. Feel the arc deepen beneath you. Settle at the bottom.',
+    done: 'Rest here.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const sag = lerp(0, 140, ep);
+      // Arc
+      svg.appendChild(s('path', {d:`M20 80 Q150 ${80+sag} 280 80`,fill:'none',stroke:'#1c1916','stroke-width': lerp(0.5,1.4,ep),'stroke-linecap':'round'}));
+      // Descending dot
+      const dotY = lerp(80, 80+sag*0.97, ep);
+      svg.appendChild(s('circle', {cx:150,cy:dotY,r:lerp(0,8,ep),fill:'rgba(28,25,22,0.38)'}));
+      // Shadow on floor
+      if (p > 0.6) {
+        const sp = (p-0.6)/0.4;
+        svg.appendChild(s('ellipse', {cx:150,cy:230,rx:lerp(0,30,sp),ry:lerp(0,4,sp),fill:'rgba(28,25,22,0.12)'}));
+      }
+    }
+  },
+  {
+    mov: 'II — Dispersal',
+    instr: 'From the center, release. Let everything radiate outward.',
+    done: 'Scatter.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const config = [
+        {a:270, maxL:115, op:0.9, sw:1.1},
+        {a:318, maxL:90,  op:0.65,sw:0.8},
+        {a:15,  maxL:100, op:0.48,sw:0.65},
+        {a:60,  maxL:78,  op:0.32,sw:0.5},
+        {a:105, maxL:90,  op:0.2, sw:0.38},
+        {a:150, maxL:68,  op:0.12,sw:0.28},
+        {a:200, maxL:75,  op:0.07,sw:0.2},
+      ];
+      config.forEach(({a, maxL, op, sw}, i) => {
+        const delay = i * 0.06;
+        const rp = Math.max(0, Math.min(1, (p - delay) / (1 - delay)));
+        const len = lerp(0, maxL, ease(rp));
+        const rad = a * Math.PI / 180;
+        svg.appendChild(s('line', {
+          x1:150, y1:150,
+          x2: 150+Math.cos(rad)*len,
+          y2: 150+Math.sin(rad)*len,
+          stroke:'#1c1916', 'stroke-width': sw, 'stroke-linecap':'round', opacity: op * rp
+        }));
+      });
+      svg.appendChild(s('circle', {cx:150,cy:150,r:lerp(3,5,ep),fill:'#1c1916'}));
+    }
+  },
+  {
+    mov: 'II — Dispersal',
+    instr: 'Each echo is smaller, farther, dimmer. Do not hold them back.',
+    done: 'Fade out.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const pts = [
+        {x:22, r:15, op:1},
+        {x:60, r:11.5, op:0.72},
+        {x:96, r:8.5, op:0.52},
+        {x:130,r:6.5, op:0.35},
+        {x:162,r:5,   op:0.22},
+        {x:192,r:3.5, op:0.12},
+        {x:218,r:2.2, op:0.06},
+      ];
+      const visible = lerp(1, 7, ep);
+      pts.forEach(({x,r,op}, i) => {
+        const appear = Math.max(0, Math.min(1, (visible - i)));
+        svg.appendChild(s('circle', {cx:x+14,cy:150,r:r*appear,fill:'#1c1916',opacity:op}));
+      });
+    }
+  },
+  {
+    mov: 'II — Dispersal',
+    instr: 'You are the innermost square and the outermost. Hold both at once.',
+    done: 'Expand.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const squares = [
+        {s:16,  sw:1.4, op:1},
+        {s:60,  sw:0.85,op:0.58},
+        {s:130, sw:0.5, op:0.3},
+        {s:230, sw:0.28,op:0.14},
+      ];
+      squares.forEach(({s:sz, sw, op}, i) => {
+        const delay = i * 0.14;
+        const rp = ease(Math.max(0, Math.min(1, (p - delay) / (1-delay))));
+        const cur = lerp(0, sz, rp);
+        svg.appendChild(s('rect', {
+          x: 150 - cur/2, y: 150 - cur/2,
+          width: cur, height: cur,
+          fill:'none', stroke:'#1c1916',
+          'stroke-width': sw, opacity: op
+        }));
+      });
+    }
+  },
+  {
+    mov: 'III — Return',
+    instr: 'Grow into your full height. Hold it — all of it.',
+    done: 'Ground.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const top = lerp(150, 18, ep);
+      // Shadow
+      svg.appendChild(s('ellipse', {cx:150,cy:275,rx:lerp(0,28,ep),ry:lerp(0,5,ep),fill:'rgba(28,25,22,0.18)'}));
+      // Line grows upward
+      svg.appendChild(s('line', {x1:150,y1:top,x2:150,y2:275,stroke:'#1c1916','stroke-width': lerp(0,2.8,ep),'stroke-linecap':'round'}));
+      // Horizontal arms spread at end
+      if (p > 0.55) {
+        const ap = ease((p-0.55)/0.45);
+        const arm = lerp(0, 55, ap);
+        svg.appendChild(s('line', {x1:150-arm,y1:lerp(275,180,ease(p)),x2:150+arm,y2:lerp(275,180,ease(p)),stroke:'#1c1916','stroke-width': lerp(0,0.8,ap),'stroke-linecap':'round',opacity:lerp(0,0.6,ap)}));
+      }
+    }
+  },
+  {
+    mov: 'III — Return',
+    instr: 'Feel the imbalance. Do not correct it. Stay exactly there.',
+    done: 'Stay still.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const tilt = lerp(0, 11, ep);
+      // Fulcrum stem
+      svg.appendChild(s('line', {x1:150,y1:55,x2:150,y2:155,stroke:'#1c1916','stroke-width':'0.9','stroke-linecap':'round'}));
+      // Beam tilts
+      svg.appendChild(s('line', {
+        x1:44,  y1: 155 + tilt,
+        x2:256, y2: 155 - tilt,
+        stroke:'#1c1916', 'stroke-width': lerp(0,1.5,ep), 'stroke-linecap':'round'
+      }));
+      // Heavy side: large open circle, descends
+      const hd = lerp(0, 30, ep);
+      const hr = lerp(0, 26, ep);
+      svg.appendChild(s('circle', {cx:68, cy: 155+tilt+hd, r:hr, fill:'none',stroke:'#1c1916','stroke-width':'1.1'}));
+      // Light side: two solid dots
+      const ld = lerp(0, 14, ep);
+      const lr = lerp(0, 13, ep);
+      svg.appendChild(s('circle', {cx:224,cy: 155-tilt+ld,    r:lr,   fill:'#1c1916',opacity:0.62}));
+      svg.appendChild(s('circle', {cx:248,cy: 155-tilt+ld+8,  r:lr*0.5,fill:'#1c1916',opacity:0.3}));
+    }
+  },
+  {
+    mov: 'III — Return',
+    instr: 'Follow the spiral. All the way around. Back to where you are.',
+    done: 'Home.',
+    draw(svg, p) {
+      const ep = ease(p);
+      const turns = 1.65;
+      const totalAngle = turns * Math.PI * 2;
+      const steps = Math.round(ep * 180);
+      if (steps < 2) return;
+      const pts = [];
+      for (let i = 0; i <= steps; i++) {
+        const f = i / 180;
+        const angle = f * totalAngle - Math.PI / 2;
+        const radius = lerp(6, 118, f);
+        pts.push([150 + Math.cos(angle)*radius, 150 + Math.sin(angle)*radius]);
+      }
+      const d = 'M' + pts.map(([x,y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L');
+      svg.appendChild(s('path', {d, fill:'none',stroke:'#1c1916','stroke-width': lerp(0,1.3,ep),'stroke-linecap':'round','stroke-linejoin':'round'}));
+
+      // Arrow at tip
+      if (pts.length >= 4) {
+        const [ax,ay] = pts[pts.length-1];
+        const [bx,by] = pts[pts.length-4];
+        const ang = Math.atan2(ay-by, ax-bx);
+        const sz = 9;
+        svg.appendChild(s('polygon', {
+          points:`${ax},${ay} ${ax-Math.cos(ang-0.55)*sz},${ay-Math.sin(ang-0.55)*sz} ${ax-Math.cos(ang+0.55)*sz},${ay-Math.sin(ang+0.55)*sz}`,
+          fill:`rgba(28,25,22,${lerp(0,0.65,ep)})`
+        }));
+      }
+    }
+  }
+];
+
+// ── STATE ──
+let current = 0;
+let holding = false;
+let progress = 0;
+let lastT = null;
+let raf = null;
+const HOLD_MS = 4000;
+const RETREAT_FACTOR = 0.35;
+
+const svgEl    = document.getElementById('glyph-svg');
+const holdRing = document.getElementById('hold-ring');
+const instrEl  = document.getElementById('instr');
+const movLabel = document.getElementById('mov-label');
+const pdots    = document.getElementById('pdots');
+const hint     = document.getElementById('bottom-hint');
+const stage    = document.getElementById('stage');
+
+// Build dots
+GLYPHS.forEach((_,i) => {
+  const d = document.createElement('div');
+  d.className = 'pdot' + (i===0?' current':'');
+  pdots.appendChild(d);
+});
+
+function syncDots() {
+  pdots.querySelectorAll('.pdot').forEach((d,i) => {
+    d.className = 'pdot' + (i<current?' done':i===current?' current':'');
+  });
+}
+
+function redraw(p) {
+  svgEl.innerHTML = '';
+  GLYPHS[current].draw(svgEl, p);
+  const circ = 1005;
+  holdRing.setAttribute('stroke-dashoffset', circ * (1-p));
+  holdRing.setAttribute('stroke', p > 0.82 ? 'rgba(28,25,22,0.5)' : 'rgba(28,25,22,0.2)');
+}
+
+function holdTick(ts) {
+  if (!holding) return;
+  if (!lastT) lastT = ts;
+  const dt = ts - lastT; lastT = ts;
+  progress = Math.min(1, progress + dt / HOLD_MS);
+  redraw(progress);
+  if (progress >= 1) { onDone(); return; }
+  raf = requestAnimationFrame(holdTick);
+}
+
+function onDone() {
+  holding = false;
+  cur.classList.remove('pressing');
+  instrEl.textContent = GLYPHS[current].done;
+  instrEl.classList.add('live');
+  hint.style.opacity = '0';
+  document.body.classList.add('flash');
+  setTimeout(() => document.body.classList.remove('flash'), 800);
+  setTimeout(advance, 1400);
+}
+
+function advance() {
+  current++;
+  if (current >= GLYPHS.length) { endScreen(); return; }
+  doWipe(() => {
+    progress = 0;
+    redraw(0);
+    instrEl.textContent = GLYPHS[current].instr;
+    instrEl.classList.remove('live');
+    movLabel.textContent = GLYPHS[current].mov;
+    syncDots();
+    hint.style.opacity = '1';
+    doWipeOut();
+  });
+}
+
+let retreatRAF = null;
+function retreat() {
+  if (retreatRAF) cancelAnimationFrame(retreatRAF);
+  const startP = progress;
+  const startT2 = performance.now();
+  const dur = startP * HOLD_MS * RETREAT_FACTOR;
+  function tick(ts) {
+    if (holding) return;
+    const el = ts - startT2;
+    progress = Math.max(0, startP * (1 - el/dur));
+    redraw(progress);
+    if (progress > 0 && !holding) retreatRAF = requestAnimationFrame(tick);
+    else { progress = 0; instrEl.classList.remove('live'); }
+  }
+  retreatRAF = requestAnimationFrame(tick);
+}
+
+// ── EVENTS: GLYPH ──
+const gs = document.getElementById('glyph-screen');
+function startH(e) {
+  if (holding) return;
+  holding = true; lastT = null;
+  instrEl.classList.add('live');
+  cur.classList.add('pressing');
+  if (retreatRAF) { cancelAnimationFrame(retreatRAF); retreatRAF = null; }
+  raf = requestAnimationFrame(holdTick);
+  e.preventDefault();
+}
+function stopH() {
+  if (!holding) return;
+  holding = false;
+  cur.classList.remove('pressing');
+  cancelAnimationFrame(raf);
+  if (progress < 1) retreat();
+}
+
+gs.addEventListener('mousedown', startH);
+gs.addEventListener('touchstart', startH, {passive:false});
+document.addEventListener('mouseup', stopH);
+document.addEventListener('touchend', stopH);
+
+// ── WIPE ──
+const wipeEl = document.getElementById('wipe');
+let wipeTimer = null;
+function doWipe(cb) {
+  wipeEl.classList.remove('out');
+  wipeEl.style.transition = 'transform 0.42s cubic-bezier(0.7,0,0.3,1)';
+  wipeEl.style.transformOrigin = 'bottom';
+  wipeEl.style.transform = 'scaleY(1)';
+  clearTimeout(wipeTimer);
+  wipeTimer = setTimeout(cb, 440);
+}
+function doWipeOut() {
+  setTimeout(() => {
+    wipeEl.style.transformOrigin = 'top';
+    wipeEl.style.transform = 'scaleY(0)';
+  }, 30);
+}
+
+// ── SCREENS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.toggle('active', s.id === id);
+  });
+}
+
+function endScreen() {
+  doWipe(() => {
+    showScreen('end-screen');
+    doWipeOut();
+    setTimeout(() => {
+      document.getElementById('end-h').classList.add('show');
+      document.getElementById('end-s').classList.add('show');
+      document.getElementById('again-btn').classList.add('show');
+    }, 80);
+  });
+}
+
+// ── BEGIN HOLD ──
+const beginWrap = document.getElementById('begin-ring-wrap');
+const beginFill = document.getElementById('begin-fill');
+const beginProg = document.getElementById('begin-prog');
+const beginLbl  = document.getElementById('begin-label');
+let bHolding = false, bProgress = 0, bLastT = null, bRAF = null;
+const BEGIN_MS = 1600;
+const BCIRC = 150.8;
+
+function bStart(e) {
+  bHolding = true; bLastT = null;
+  cur.classList.add('pressing');
+  beginLbl.textContent = 'Holding…';
+  function tick(ts) {
+    if (!bHolding) return;
+    if (!bLastT) bLastT = ts;
+    bProgress = Math.min(1, bProgress + (ts - bLastT) / BEGIN_MS);
+    bLastT = ts;
+    beginProg.setAttribute('stroke-dashoffset', BCIRC * (1 - bProgress));
+    beginFill.setAttribute('r', lerp(0, 24, ease(bProgress)));
+    if (bProgress >= 1) {
+      bHolding = false;
+      cur.classList.remove('pressing');
+      doWipe(() => {
+        showScreen('glyph-screen');
+        redraw(0); setRing0();
+        instrEl.textContent = GLYPHS[0].instr;
+        movLabel.textContent = GLYPHS[0].mov;
+        syncDots();
+        doWipeOut();
+      });
+    } else {
+      bRAF = requestAnimationFrame(tick);
+    }
+  }
+  bRAF = requestAnimationFrame(tick);
+  e.preventDefault();
+}
+function bStop() {
+  if (!bHolding) return;
+  bHolding = false;
+  cur.classList.remove('pressing');
+  cancelAnimationFrame(bRAF);
+  // Retreat
+  const sp = bProgress;
+  const st = performance.now();
+  function rt(ts) {
+    const el = ts - st;
+    bProgress = Math.max(0, sp * (1 - el/(sp*BEGIN_MS*0.4)));
+    beginProg.setAttribute('stroke-dashoffset', BCIRC*(1-bProgress));
+    beginFill.setAttribute('r', lerp(0, 24, ease(bProgress)));
+    if (bProgress > 0) requestAnimationFrame(rt);
+    else { bProgress = 0; beginLbl.textContent = 'Hold to begin'; }
+  }
+  requestAnimationFrame(rt);
+}
+
+function setRing0() {
+  holdRing.setAttribute('stroke-dashoffset', 1005);
+  holdRing.setAttribute('stroke', 'rgba(28,25,22,0.2)');
+}
+
+beginWrap.addEventListener('mousedown', bStart);
+beginWrap.addEventListener('touchstart', bStart, {passive:false});
+document.addEventListener('mouseup', bStop);
+document.addEventListener('touchend', bStop);
+
+// ── RESTART ──
+document.getElementById('again-btn').addEventListener('click', () => {
+  current = 0; progress = 0; bProgress = 0;
+  ['end-h','end-s','again-btn'].forEach(id => document.getElementById(id).classList.remove('show'));
+  doWipe(() => {
+    showScreen('title-screen');
+    ['tl1','tl2','tl3','tsub','begin-area'].forEach(id => document.getElementById(id).classList.remove('show'));
+    beginLbl.textContent = 'Hold to begin';
+    beginProg.setAttribute('stroke-dashoffset', BCIRC);
+    beginFill.setAttribute('r', 0);
+    syncDots();
+    doWipeOut();
+    let d = 100;
+    ['tl1','tl2','tl3'].forEach(id => { setTimeout(() => document.getElementById(id).classList.add('show'), d); d+=380; });
+    setTimeout(() => document.getElementById('tsub').classList.add('show'), d);
+    setTimeout(() => document.getElementById('begin-area').classList.add('show'), d+300);
+  });
+});
+
+// ── TITLE ENTRY ──
+let td = 150;
+['tl1','tl2','tl3'].forEach(id => { setTimeout(() => document.getElementById(id).classList.add('show'), td); td+=380; });
+setTimeout(() => document.getElementById('tsub').classList.add('show'), td);
+setTimeout(() => document.getElementById('begin-area').classList.add('show'), td+300);
+</script>
+</body>
+</html>
