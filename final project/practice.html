@@ -1,456 +1,402 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SURVEILLED</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>SURVEILLANCE SCAN</title>
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:#f5f4f0;color:#1a1a1a;font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;}
-.layout{display:grid;grid-template-columns:240px 1fr 240px;gap:0;padding:2rem 1rem;max-width:1080px;margin:0 auto;align-items:start;}
-.side{display:flex;flex-direction:column;gap:1.2rem;padding:0 1rem;}
-.qb{border-bottom:1px solid #ddd;padding-bottom:1rem;}
-.qlabel{font-size:9px;letter-spacing:0.2em;color:#aaa;margin-bottom:0.4rem;text-transform:uppercase;}
-.qtext{font-size:12px;color:#333;margin-bottom:0.6rem;line-height:1.5;font-weight:400;}
-input[type=range]{width:100%;height:1px;background:#ccc;outline:none;border:none;cursor:pointer;-webkit-appearance:none;appearance:none;margin:6px 0;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#1a1a1a;border-radius:50%;cursor:pointer;}
-.rv{font-size:11px;text-align:right;color:#666;margin-top:2px;}
-.opts{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
-.ob{background:transparent;border:1px solid #ccc;color:#888;font-family:'Inter',sans-serif;font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:0.05em;transition:all 0.1s;border-radius:2px;}
-.ob:hover{border-color:#999;color:#333;}
-.ob.on{background:#1a1a1a;border-color:#1a1a1a;color:#fff;}
-.center{display:flex;flex-direction:column;align-items:center;gap:1rem;padding:0 0.5rem;}
-.fbox-placeholder{width:320px;height:380px;background:#e8e6e0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#aaa;font-size:11px;letter-spacing:0.1em;text-align:center;padding:1.5rem;}
-#videoEl{display:none;width:320px;height:380px;object-fit:cover;transform:scaleX(-1) scale(0.7);}
-#mainCanvas{display:none;}
-.capbtn{background:#1a1a1a;border:none;color:#fff;font-family:'Inter',sans-serif;font-size:11px;padding:8px 20px;cursor:pointer;letter-spacing:0.1em;transition:background 0.15s;font-weight:400;}
-.capbtn:hover{background:#333;}
-.capbtn.outline{background:transparent;border:1px solid #ccc;color:#666;}
-.capbtn.outline:hover{border-color:#999;color:#333;}
-.camst{font-size:10px;letter-spacing:0.1em;color:#aaa;text-align:center;text-transform:uppercase;}
-.btnrow{display:flex;gap:8px;align-items:center;}
-.meters{display:flex;width:320px;border:1px solid #ddd;}
-.mb{flex:1;padding:1rem;text-align:center;border-right:1px solid #ddd;}
-.mb:last-child{border-right:none;}
-.mlbl{font-size:9px;letter-spacing:0.15em;color:#aaa;margin-bottom:4px;text-transform:uppercase;}
-.mv{font-size:28px;line-height:1;color:#1a1a1a;font-weight:300;}
-.mbar{height:1px;background:#e0e0e0;margin-top:6px;overflow:hidden;}
-.mbf{height:100%;transition:width 0.5s ease;background:#1a1a1a;}
-.index-bar{width:320px;border:1px solid #ddd;padding:1rem;text-align:center;background:#fff;}
-.index-label{font-size:9px;letter-spacing:0.2em;color:#aaa;text-transform:uppercase;margin-bottom:6px;}
-.index-value{font-size:44px;line-height:1;color:#1a1a1a;font-weight:300;}
-.index-desc{font-size:10px;color:#999;letter-spacing:0.1em;margin-top:4px;text-transform:uppercase;}
-.index-track{height:2px;background:#eee;margin-top:10px;overflow:hidden;}
-.index-fill{height:100%;background:#1a1a1a;transition:width 0.6s ease;}
-.readout{font-size:11px;color:#666;line-height:1.9;}
-.status-msg{font-size:10px;color:#aaa;text-align:center;min-height:16px;}
-@media(max-width:860px){.layout{grid-template-columns:1fr 1fr}.center{grid-column:1/-1;order:-1}}
-@media(max-width:540px){.layout{grid-template-columns:1fr}.meters,.index-bar{width:100%;max-width:320px}}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap');
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#000;
+  font-family:'Inter',sans-serif;
+}
+
+body{
+  position:relative;
+}
+
+/* CAMERA */
+
+#video{
+  display:none;
+}
+
+#canvas,
+#overlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* HUD */
+
+.topbar{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  padding:18px;
+  background:rgba(0,0,0,0.45);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  z-index:20;
+  pointer-events:none;
+}
+
+.topbar span{
+  color:#f2e8c9;
+  font-size:11px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+}
+
+.bottombar{
+  position:absolute;
+  bottom:0;
+  left:0;
+  width:100%;
+  padding:18px;
+  background:rgba(0,0,0,0.45);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  z-index:20;
+  pointer-events:none;
+}
+
+.bottombar span{
+  color:#f2e8c9;
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+}
+
+/* BUTTONS */
+
+.controls{
+  position:absolute;
+  bottom:70px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:30;
+  display:flex;
+  gap:10px;
+}
+
+button{
+  border:none;
+  background:rgba(0,0,0,0.7);
+  color:#fff;
+  padding:12px 18px;
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,0.15);
+  font-family:'Inter',sans-serif;
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+}
+
+button:active{
+  transform:scale(0.96);
+}
+
+#flash{
+  position:absolute;
+  inset:0;
+  background:#fff;
+  opacity:0;
+  pointer-events:none;
+  z-index:50;
+}
+
+/* PHONE ONLY */
+
+.desktop-warning{
+  position:fixed;
+  inset:0;
+  background:#000;
+  color:#fff;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:40px;
+  z-index:999;
+  font-size:14px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+}
+
+@media (min-width: 900px){
+  .desktop-warning{
+    display:flex;
+  }
+
+  .app{
+    display:none;
+  }
+}
 </style>
 </head>
+
 <body>
 
-<div class="layout">
-
-  <!-- LEFT -->
-  <div class="side">
-    <div class="qb">
-      <div class="qlabel">Quantitative · 01</div>
-      <div class="qtext">Hours on phone per day</div>
-      <input type="range" min="0" max="16" value="4" step="1" id="phoneHours" oninput="upR('phoneHours','phv');go()">
-      <div class="rv"><span id="phv">4</span> hrs</div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Quantitative · 02</div>
-      <div class="qtext">Location services</div>
-      <div class="opts">
-        <button class="ob on" onclick="sel(this,'loc')" data-v="1">Always</button>
-        <button class="ob" onclick="sel(this,'loc')" data-v="0.5">Sometimes</button>
-        <button class="ob" onclick="sel(this,'loc')" data-v="0">Never</button>
-      </div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Quantitative · 03</div>
-      <div class="qtext">Do you cover your camera?</div>
-      <div class="opts">
-        <button class="ob" onclick="sel(this,'cam')" data-v="1">Yes</button>
-        <button class="ob on" onclick="sel(this,'cam')" data-v="0">No</button>
-      </div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Quantitative · 04</div>
-      <div class="qtext">Number of social media apps</div>
-      <input type="range" min="0" max="12" value="3" step="1" id="socialApps" oninput="upR('socialApps','sav');go()">
-      <div class="rv"><span id="sav">3</span> apps</div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Quantitative · 05</div>
-      <div class="qtext">Comfort level being surveilled (1–10)</div>
-      <input type="range" min="1" max="10" value="5" step="1" id="comfort" oninput="upR('comfort','cfv');go()">
-      <div class="rv"><span id="cfv">5</span> / 10</div>
-    </div>
-  </div>
-
-  <!-- CENTER -->
-  <div class="center">
-    <div id="faceArea">
-      <div class="fbox-placeholder" id="ph">
-        <div style="font-size:11px;color:#bbb;margin-bottom:12px">No subject detected</div>
-        <button class="capbtn" onclick="startCam()">Open Camera</button>
-        <div style="font-size:10px;color:#ccc;margin:8px 0 4px">or</div>
-        <label class="capbtn outline" style="cursor:pointer">
-          Upload Photo
-          <input type="file" accept="image/*" onchange="loadFile(event)" style="display:none">
-        </label>
-      </div>
-      <video id="videoEl" autoplay muted playsinline></video>
-      <canvas id="mainCanvas"></canvas>
-    </div>
-
-    <div class="btnrow">
-      <button class="capbtn" id="snapBtn" onclick="snapPhoto()" style="display:none">Capture</button>
-      <button class="capbtn outline" id="retakeBtn" onclick="retake()" style="display:none">Retake</button>
-    </div>
-
-    <div class="status-msg" id="statusMsg"></div>
-    <div class="camst" id="camst">Answer the questions · capture a photo · see your face</div>
-
-    <div class="index-bar">
-      <div class="index-label">Surveillance Index</div>
-      <div class="index-value" id="indexDisp">0<span style="font-size:22px">%</span></div>
-      <div class="index-desc" id="indexDesc">Undetermined</div>
-      <div class="index-track"><div class="index-fill" id="indexFill" style="width:0%"></div></div>
-    </div>
-
-    <div class="meters">
-      <div class="mb">
-        <div class="mlbl">Paranoia</div>
-        <div class="mv" id="pdisp">0<span style="font-size:14px">%</span></div>
-        <div class="mbar"><div class="mbf" id="pbar" style="width:0%"></div></div>
-      </div>
-      <div class="mb">
-        <div class="mlbl">Fear</div>
-        <div class="mv" id="fdisp">0<span style="font-size:14px">%</span></div>
-        <div class="mbar"><div class="mbf" id="fbar" style="width:0%"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RIGHT -->
-  <div class="side">
-    <div class="qb">
-      <div class="qlabel">Behavioral · 01</div>
-      <div class="qtext">Have you ever changed your behavior because you felt watched?</div>
-      <div class="opts">
-        <button class="ob" onclick="sel(this,'bh1')" data-v="1">Yes</button>
-        <button class="ob on" onclick="sel(this,'bh1')" data-v="0">No</button>
-        <button class="ob" onclick="sel(this,'bh1')" data-v="0.5">Sometimes</button>
-      </div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Behavioral · 02</div>
-      <div class="qtext">Do you act differently online vs offline?</div>
-      <div class="opts">
-        <button class="ob" onclick="sel(this,'bh2')" data-v="1">Yes</button>
-        <button class="ob on" onclick="sel(this,'bh2')" data-v="0">No</button>
-        <button class="ob" onclick="sel(this,'bh2')" data-v="0.5">Somewhat</button>
-      </div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Emotional · Response</div>
-      <div class="qtext">How does surveillance make you feel?</div>
-      <div class="opts" style="margin-top:6px">
-        <button class="ob" onclick="tog(this,'watched')">Watched</button>
-        <button class="ob" onclick="tog(this,'safe')">Safe</button>
-        <button class="ob" onclick="tog(this,'anxious')">Anxious</button>
-        <button class="ob" onclick="tog(this,'indifferent')">Indifferent</button>
-        <button class="ob" onclick="tog(this,'exposed')">Exposed</button>
-        <button class="ob" onclick="tog(this,'controlled')">Controlled</button>
-      </div>
-    </div>
-    <div class="qb">
-      <div class="qlabel">Profile</div>
-      <div class="readout" id="readout">Awaiting input...<br>Profile: —<br>Risk level: —</div>
-    </div>
-  </div>
+<div class="desktop-warning">
+  Open this experience on your phone.
 </div>
 
-<!-- Hidden canvases for processing -->
-<canvas id="segCanvas" style="display:none"></canvas>
+<div class="app">
 
-<!-- Load MediaPipe as regular scripts (not module) -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+  <video id="video" autoplay muted playsinline></video>
+
+  <canvas id="canvas"></canvas>
+  <canvas id="overlay"></canvas>
+
+  <div id="flash"></div>
+
+  <div class="topbar">
+    <span>SURVEILLANCE SCAN</span>
+    <span id="time"></span>
+  </div>
+
+  <div class="bottombar">
+    <span>PARANOIA 100%</span>
+    <span>HYPERVIGILANT · CRITICAL</span>
+    <span>FEAR 100%</span>
+  </div>
+
+  <div class="controls">
+    <button onclick="startCamera()">START</button>
+    <button onclick="capture()">CAPTURE</button>
+  </div>
+
+</div>
 
 <script>
-// ── State ──
-const S = { phoneHours:4,loc:1,cam:0,socialApps:3,comfort:5,bh1:0,bh2:0,words:new Set(),P:0,F:0,INDEX:0 };
 
-let stream = null;
-let hasPhoto = false;
-let capturedImageData = null;
-let personMask = null;
-let imgW = 0, imgH = 0;
-let segReady = false;
-let segResolve = null;
-let selfieSegmentation = null;
+const video=document.getElementById('video');
 
-const videoEl    = document.getElementById('videoEl');
-const mainCanvas = document.getElementById('mainCanvas');
-const segCanvas  = document.getElementById('segCanvas');
-const ctx        = mainCanvas.getContext('2d');
-const segCtx     = segCanvas.getContext('2d');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d',{willReadFrequently:true});
 
-// ── MediaPipe init ──
-function initSeg(){
-  return new Promise((resolve, reject) => {
-    try {
-      selfieSegmentation = new SelfieSegmentation({
-        locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`
-      });
-      selfieSegmentation.setOptions({ modelSelection: 1 });
-      selfieSegmentation.onResults(onSegResults);
-      selfieSegmentation.initialize().then(() => {
-        segReady = true;
-        resolve();
-      }).catch(reject);
-    } catch(e){ reject(e); }
-  });
+const overlay=document.getElementById('overlay');
+const octx=overlay.getContext('2d');
+
+const flash=document.getElementById('flash');
+
+let w=0;
+let h=0;
+
+const CELL=3;
+const PIXEL=85;
+
+const CHARS=[
+'@','#','%','8','9','6','5','4','3','2','1','0'
+];
+
+function thermal(v){
+
+  if(v<0.15) return [30,0,60];
+  if(v<0.25) return [80,0,140];
+  if(v<0.35) return [160,0,200];
+  if(v<0.45) return [255,0,180];
+  if(v<0.55) return [255,0,80];
+  if(v<0.65) return [255,60,0];
+  if(v<0.75) return [255,140,0];
+  if(v<0.85) return [255,210,0];
+
+  return [255,255,180];
 }
 
-function onSegResults(results){
-  const mask = results.segmentationMask;
-  const mW = mask.width, mH = mask.height;
-  segCanvas.width = mW; segCanvas.height = mH;
-  segCtx.drawImage(mask, 0, 0, mW, mH);
-  const md = segCtx.getImageData(0, 0, mW, mH).data;
+async function startCamera(){
 
-  // Build Float32 mask resampled to image size
-  const m = new Float32Array(imgW * imgH);
-  for(let y = 0; y < imgH; y++){
-    for(let x = 0; x < imgW; x++){
-      const mx = Math.min(mW-1, Math.round(x * mW / imgW));
-      const my = Math.min(mH-1, Math.round(y * mH / imgH));
-      m[y * imgW + x] = md[(my * mW + mx) * 4] / 255;
-    }
-  }
-  personMask = m;
-  if(segResolve){ segResolve(); segResolve = null; }
-}
-
-async function runSeg(imgEl){
-  if(!segReady) await initSeg();
-  return new Promise(resolve => {
-    segResolve = resolve;
-    selfieSegmentation.send({ image: imgEl });
-  });
-}
-
-// ── Question handlers ──
-function upR(id,vid){ S[id]=+document.getElementById(id).value; document.getElementById(vid).textContent=S[id]; }
-function sel(btn,g){ btn.closest('.opts').querySelectorAll('.ob').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); S[g]=+btn.dataset.v; go(); }
-function tog(btn,w){ btn.classList.toggle('on'); S.words.has(w)?S.words.delete(w):S.words.add(w); go(); }
-
-function go(){
-  let p=0,f=0;
-  p+=(S.phoneHours/16)*10; p+=S.cam*15; p+=((10-S.comfort)/9)*15;
-  p+=(S.socialApps/12)*8; p+=(1-S.loc)*7; p+=S.bh1*12; p+=S.bh2*8;
-  p=Math.min(100,Math.max(0,p));
-  if(S.words.has('anxious'))f+=25; if(S.words.has('exposed'))f+=20;
-  if(S.words.has('controlled'))f+=22; if(S.words.has('watched'))f+=10;
-  if(S.words.has('indifferent'))f+=2; if(S.words.has('safe'))f-=15;
-  f+=S.bh1*10+S.bh2*6; f+=((10-S.comfort)/9)*12;
-  f=Math.min(100,Math.max(0,f));
-  S.P=Math.round(p); S.F=Math.round(f); S.INDEX=Math.round((p+f)/2);
-  updateUI();
-  if(hasPhoto) render();
-}
-
-function updateUI(){
-  const p=S.P,f=S.F,idx=S.INDEX;
-  document.getElementById('pdisp').innerHTML=p+'<span style="font-size:14px">%</span>';
-  document.getElementById('fdisp').innerHTML=f+'<span style="font-size:14px">%</span>';
-  document.getElementById('pbar').style.width=p+'%';
-  document.getElementById('fbar').style.width=f+'%';
-  document.getElementById('indexDisp').innerHTML=idx+'<span style="font-size:22px">%</span>';
-  document.getElementById('indexFill').style.width=idx+'%';
-  let prof,risk;
-  if(idx<15){prof='Compliant · Unaware';risk='Minimal';}
-  else if(idx<35){prof='Passive · Aware';risk='Low';}
-  else if(idx<55){prof='Cautious · Alert';risk='Moderate';}
-  else if(idx<75){prof='Resistant · Fearful';risk='Elevated';}
-  else{prof='Hypervigilant · Paranoid';risk='Critical';}
-  document.getElementById('indexDesc').textContent=prof;
-  document.getElementById('readout').innerHTML=
-    'Profile: '+prof+'<br>Risk level: '+risk+'<br>'+
-    'Paranoia: '+p+'%  ·  Fear: '+f+'%<br>'+
-    'Behavioral flags: '+((S.bh1>0?1:0)+(S.bh2>0?1:0))+'<br>'+
-    'Emotional markers: '+S.words.size;
-}
-
-// ── Camera ──
-async function startCam(){
   try{
-    stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:'user', width:{ideal:640}, height:{ideal:480} }, audio:false
+
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:{
+          ideal:'environment'
+        },
+        width:{
+          ideal:1920
+        },
+        height:{
+          ideal:1080
+        }
+      },
+      audio:false
     });
-    videoEl.srcObject = stream;
-    videoEl.style.display = 'block';
-    document.getElementById('ph').style.display = 'none';
-    document.getElementById('snapBtn').style.display = '';
-    document.getElementById('camst').textContent = 'Position your face · press Capture';
-  } catch(e){
-    document.getElementById('camst').textContent = 'Camera denied · please upload a photo';
+
+    video.srcObject=stream;
+
+    await video.play();
+
+    w=video.videoWidth;
+    h=video.videoHeight;
+
+    canvas.width=w;
+    canvas.height=h;
+
+    overlay.width=w;
+    overlay.height=h;
+
+    loop();
+
+  }catch(err){
+
+    alert('Camera access denied.');
+
   }
 }
 
-// ── File upload ──
-function loadFile(e){
-  const file = e.target.files[0]; if(!file) return;
-  const img = new Image();
-  img.onload = async () => {
-    await ingestImage(img, img.naturalWidth, img.naturalHeight);
-    URL.revokeObjectURL(img.src);
-  };
-  img.src = URL.createObjectURL(file);
-}
+function loop(){
 
-// ── Snap from camera ──
-async function snapPhoto(){
-  const w = videoEl.videoWidth || 640;
-  const h = videoEl.videoHeight || 480;
+  requestAnimationFrame(loop);
 
-  const tmp = document.createElement('canvas');
-  tmp.width = w; tmp.height = h;
-  const tc = tmp.getContext('2d');
-  tc.save(); tc.translate(w,0); tc.scale(-1,1);
-  tc.drawImage(videoEl, 0, 0, w, h);
-  tc.restore();
+  if(video.readyState<2) return;
 
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-  videoEl.style.display = 'none';
-  document.getElementById('snapBtn').style.display = 'none';
+  ctx.drawImage(video,0,0,w,h);
 
-  const tmpImg = new Image();
-  tmpImg.onload = async () => { await ingestImage(tmpImg, w, h); };
-  tmpImg.src = tmp.toDataURL('image/png');
-}
+  let frame=ctx.getImageData(0,0,w,h);
 
-// ── Ingest at exact native dimensions ──
-async function ingestImage(imgEl, w, h){
-  imgW = w; imgH = h;
-  mainCanvas.width = w;
-  mainCanvas.height = h;
+  let d=frame.data;
 
-  // Draw original image immediately
-  ctx.clearRect(0,0,w,h);
-  ctx.drawImage(imgEl, 0,0, w,h);
-  capturedImageData = ctx.getImageData(0,0,w,h);
+  // MASSIVE PIXELATION
 
-  mainCanvas.style.display = 'block';
-  document.getElementById('ph').style.display = 'none';
-  document.getElementById('retakeBtn').style.display = '';
-  document.getElementById('statusMsg').textContent = 'Detecting person…';
-  document.getElementById('camst').textContent = 'Processing…';
+  for(let y=0;y<h;y+=PIXEL){
 
-  try{
-    await runSeg(imgEl);
-    document.getElementById('statusMsg').textContent = '';
-    document.getElementById('camst').textContent = 'Captured · adjust answers to update pixelation';
-  } catch(err){
-    console.warn('Segmentation failed, pixelating full image:', err);
-    personMask = null;
-    document.getElementById('statusMsg').textContent = '';
-    document.getElementById('camst').textContent = 'Captured · adjust answers to update pixelation';
-  }
+    for(let x=0;x<w;x+=PIXEL){
 
-  hasPhoto = true;
-  render();
-}
+      let i=(y*w+x)*4;
 
-// ── Render ──
-function render(){
-  if(!hasPhoto || !capturedImageData) return;
-  const W = imgW, H = imgH;
-  const d = capturedImageData.data;
-  const idx = S.INDEX / 100;
-  const blockSize = Math.max(1, Math.round(idx * 50));
+      let r=d[i];
+      let g=d[i+1];
+      let b=d[i+2];
 
-  // No pixelation — restore original
-  if(blockSize <= 1 || !personMask){
-    ctx.putImageData(capturedImageData, 0, 0);
-    return;
-  }
+      for(let yy=0;yy<PIXEL;yy++){
 
-  // Compute block averages over person pixels only
-  const bCols = Math.ceil(W / blockSize);
-  const bRows = Math.ceil(H / blockSize);
-  const bR = new Float32Array(bCols * bRows);
-  const bG = new Float32Array(bCols * bRows);
-  const bB = new Float32Array(bCols * bRows);
-  const bN = new Float32Array(bCols * bRows);
+        for(let xx=0;xx<PIXEL;xx++){
 
-  for(let y = 0; y < H; y++){
-    for(let x = 0; x < W; x++){
-      const m = personMask[y*W+x];
-      if(m < 0.3) continue;
-      const bi = Math.floor(y/blockSize)*bCols + Math.floor(x/blockSize);
-      const pi = (y*W+x)*4;
-      bR[bi]+=d[pi]*m; bG[bi]+=d[pi+1]*m; bB[bi]+=d[pi+2]*m; bN[bi]+=m;
-    }
-  }
+          let px=x+xx;
+          let py=y+yy;
 
-  // Determine which blocks are "active" — block is active if ANY pixel inside
-  // it has mask >= 0.3. This means edge blocks get completed as full squares.
-  const blockActive = new Uint8Array(bCols * bRows);
-  for(let y = 0; y < H; y++){
-    for(let x = 0; x < W; x++){
-      if(personMask[y*W+x] >= 0.3){
-        blockActive[Math.floor(y/blockSize)*bCols + Math.floor(x/blockSize)] = 1;
+          if(px>=w||py>=h) continue;
+
+          let ni=(py*w+px)*4;
+
+          d[ni]=r;
+          d[ni+1]=g;
+          d[ni+2]=b;
+        }
       }
     }
   }
 
-  // Build output: background = original, active blocks = full pixelated square
-  const out = new ImageData(new Uint8ClampedArray(d), W, H);
-  const dst = out.data;
+  ctx.putImageData(frame,0,0);
 
-  for(let y = 0; y < H; y++){
-    for(let x = 0; x < W; x++){
-      const bi = Math.floor(y/blockSize)*bCols + Math.floor(x/blockSize);
-      if(!blockActive[bi]) continue; // background block — keep original
-      const n = bN[bi];
-      if(n === 0) continue;
-      const pi = (y*W+x)*4;
-      // Every pixel inside an active block gets the block's average color — full square, clean edges
-      dst[pi]   = Math.round(bR[bi]/n);
-      dst[pi+1] = Math.round(bG[bi]/n);
-      dst[pi+2] = Math.round(bB[bi]/n);
-      dst[pi+3] = 255;
+  drawNumbers(d);
+}
+
+function drawNumbers(d){
+
+  octx.clearRect(0,0,w,h);
+
+  octx.font='bold 11px Courier New';
+  octx.textBaseline='top';
+
+  for(let y=0;y<h;y+=CELL){
+
+    for(let x=0;x<w;x+=CELL){
+
+      const i=(y*w+x)*4;
+
+      const r=d[i];
+      const g=d[i+1];
+      const b=d[i+2];
+
+      const luma=(
+        0.299*r+
+        0.587*g+
+        0.114*b
+      )/255;
+
+      const char=
+        CHARS[
+          Math.floor(luma*(CHARS.length-1))
+        ];
+
+      const [tr,tg,tb]=thermal(luma);
+
+      octx.fillStyle=
+        `rgb(${tr},${tg},${tb})`;
+
+      octx.fillText(char,x,y);
     }
   }
-
-  ctx.putImageData(out, 0, 0);
 }
 
-// ── Retake ──
-function retake(){
-  hasPhoto = false; capturedImageData = null; personMask = null; imgW = 0; imgH = 0;
-  mainCanvas.style.display = 'none';
-  ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
-  document.getElementById('retakeBtn').style.display = 'none';
-  document.getElementById('snapBtn').style.display = 'none';
-  document.getElementById('statusMsg').textContent = '';
-  const ph = document.getElementById('ph');
-  ph.style.display = 'flex';
-  ph.innerHTML = '<div style="font-size:11px;color:#bbb;margin-bottom:12px">No subject detected</div><button class="capbtn" onclick="startCam()">Open Camera</button><div style="font-size:10px;color:#ccc;margin:8px 0 4px">or</div><label class="capbtn outline" style="cursor:pointer">Upload Photo<input type="file" accept="image/*" onchange="loadFile(event)" style="display:none"></label>';
-  document.getElementById('camst').textContent = 'Answer the questions · capture a photo · see your face';
+function capture(){
+
+  const exportCanvas=document.createElement('canvas');
+
+  exportCanvas.width=w;
+  exportCanvas.height=h;
+
+  const ex=exportCanvas.getContext('2d');
+
+  ex.drawImage(canvas,0,0);
+  ex.drawImage(overlay,0,0);
+
+  flash.style.opacity='0.8';
+
+  setTimeout(()=>{
+    flash.style.transition='opacity 0.4s';
+    flash.style.opacity='0';
+  },50);
+
+  const a=document.createElement('a');
+
+  a.download='surveillance_scan.png';
+
+  a.href=exportCanvas.toDataURL('image/png');
+
+  a.click();
 }
 
-go();
+function updateTime(){
 
-// Pre-warm segmentation model in background
-initSeg().catch(() => {});
+  const now=new Date();
+
+  const t=
+    String(now.getHours()).padStart(2,'0')+
+    ':'+
+    String(now.getMinutes()).padStart(2,'0')+
+    ':'+
+    String(now.getSeconds()).padStart(2,'0');
+
+  document.getElementById('time').textContent=t;
+}
+
+setInterval(updateTime,1000);
+
+updateTime();
+
 </script>
+
 </body>
 </html>
