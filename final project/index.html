@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SURVEILLED · LIVE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:#f5f4f0;color:#1a1a1a;font-family:'Inter',sans-serif;font-weight:300;}
+.split{display:flex;height:100vh;}
+.panel-left{
+  width:25%;min-width:220px;height:100vh;overflow-y:auto;
+  border-right:1px solid #ddd;padding:2rem 1.4rem;
+  display:flex;flex-direction:column;gap:1.4rem;background:#000000;
+}
+.panel-left::-webkit-scrollbar{width:3px;}
+.panel-left::-webkit-scrollbar-thumb{background:#3e3e3e;}
+.panel-right{flex:1;height:100vh;display:flex;flex-direction:column;background:#000;overflow:hidden;}
+.image-area{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;background:#000;
+}
+.fbox-placeholder{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;color:#aaa;font-size:11px;letter-spacing:0.1em;text-align:center;
+  width:100%;height:100%;background:#000000;
+}
+#videoEl{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+.canvas-wrap{position:absolute;inset:0;display:none;width:100%;height:100%;}
+#mainCanvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#numCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.status-bar{
+  position:absolute;top:0.8rem;left:50%;transform:translateX(-50%);
+  font-size:10px;letter-spacing:0.12em;color:#777;text-transform:uppercase;white-space:nowrap;z-index:10;
+}
+.btn-row{
+  position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:10;
+}
+.info-strip{display:none;}
+.meter-block{display:flex;flex-direction:column;gap:4px;min-width:100px;}
+.mlbl{font-size:9px;letter-spacing:0.15em;color:#aaa;text-transform:uppercase;}
+.mv{font-size:26px;line-height:1;color:#1a1a1a;font-weight:300;}
+.mv.red{color:#c0392b;}
+.mbar{height:1px;background:#e0e0e0;margin-top:4px;width:100px;overflow:hidden;}
+.mbf{height:100%;transition:width 0.5s ease;background:#1a1a1a;}
+.mbf.red{background:#c0392b;}
+.divider{width:1px;background:#ddd;align-self:stretch;}
+.profile-block{flex:1;min-width:180px;}
+.profile-label{font-size:9px;letter-spacing:0.2em;color:#aaa;text-transform:uppercase;margin-bottom:4px;}
+.readout{font-size:11px;color:#666;line-height:1.9;}
+.qb{border-bottom:1px solid #e8e8e8;padding-bottom:1.2rem;}
+.qlabel{font-size:9px;letter-spacing:0.2em;color:#aaa;margin-bottom:0.4rem;text-transform:uppercase;}
+.qtext{font-size:11px;color:#4a4a4a;margin-bottom:0.6rem;line-height:1.5;font-weight:400;}
+input[type=range]{width:100%;height:1px;background:#ccc;outline:none;border:none;cursor:pointer;-webkit-appearance:none;appearance:none;margin:6px 0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#ff00d4;border-radius:50%;cursor:pointer;}
+.rv{font-size:10px;text-align:right;color:#666;margin-top:2px;}
+.opts{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.ob{background:transparent;border:1px solid #ccc;color:#888;font-family:'Inter',sans-serif;font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:0.05em;transition:all 0.1s;border-radius:2px;}
+.ob:hover{border-color:#999;color:#333;}
+.ob.on{background:#ff00d4;border-color:#1a1a1a;color:#fff;}
+.capbtn{background:#1a1a1a;border:none;color:#fff;font-family:'Inter',sans-serif;font-size:11px;padding:8px 20px;cursor:pointer;letter-spacing:0.1em;transition:background 0.15s;font-weight:400;}
+.capbtn:hover{background:#ff00d4;}
+.capbtn.outline{background:rgba(245,244,240,0.9);border:1px solid #ccc;color:#555;}
+.capbtn.outline:hover{border-color:#999;color:#333;}
+.capbtn.flash{background:#fff;color:#000;}
+.panel-header{font-size:9px;letter-spacing:0.25em;color:#bbb;text-transform:uppercase;margin-bottom:0.4rem;}
+/* flash overlay for screenshot feedback */
+#flashEl{
+  position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:20;
+  transition:opacity 0.05s;
+}
+@media(max-width:640px){
+  .split{flex-direction:column;height:auto;overflow:auto;}
+  html,body{height:auto;overflow:auto;}
+  .panel-left{width:100%;height:auto;overflow-y:visible;border-right:none;border-bottom:1px solid #ddd;}
+  .panel-right{height:70vw;min-height:320px;}
+  .info-strip{flex-direction:column;gap:1rem;}
+  .divider{width:100%;height:1px;}
+}
+/* ABOUT BUTTON */
+
+.about-top-btn{
+  /* position:absolute;
+  top:18px;
+  left:18px; */
+  width: 100px;
+  background:rgb(0, 0, 0);
+  border:1px solid #444;
+  color:#ff00d4;
+  padding:6px 14px;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  cursor:pointer;
+  font-family:'Inter',sans-serif;
+  transition:all 0.2s ease;
+  z-index:30;
+}
+
+.about-top-btn:hover{
+  background:#ff00d4;
+  color:#ffffff;
+}
+
+/* MODAL */
+
+.about-modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.25s ease;
+  z-index:100;
+}
+
+.about-modal.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.about-box{
+  width:min(680px,90vw);
+  background:#0d0d0d;
+  border:1px solid #2d2d2d;
+  border-radius: 10px;
+  padding:42px;
+  position:relative;
+  color:#d8d8d8;
+  box-shadow:0 0 40px rgba(0,0,0,0.4);
+}
+
+.about-title{
+  font-size:11px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  margin-bottom:28px;
+  color:#f1e8c7;
+}
+
+.about-text{
+  font-size:13px;
+  line-height:2;
+  color:#bdbdbd;
+  font-weight:300;
+}
+
+.about-close{
+  position:absolute;
+  top:12px;
+  right:14px;
+  background:none;
+  border:none;
+  color:#777;
+  font-size:24px;
+  cursor:pointer;
+  transition:color 0.2s ease;
+}
+
+.about-close:hover{
+  color:#ff00d4;
+}
+</style>
+</head>
+<body>
+<div class="split">
+
+  <!-- LEFT -->
+ 
+  <div class="panel-left">
+     <button class="about-top-btn" onclick="openAbout()">About</button>
+    <div class="panel-header">Surveilled · Live</div>
+    <div class="qb">
+      <div class="qlabel">Quantitative · 01</div>
+      <div class="qtext">Hours on phone per day</div>
+      <input type="range" min="0" max="16" value="4" step="1" id="phoneHours" oninput="upR('phoneHours','phv');go()">
+      <div class="rv"><span id="phv">4</span> hrs</div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Quantitative · 02</div>
+      <div class="qtext">Location services</div>
+      <div class="opts">
+        <button class="ob on" onclick="sel(this,'loc')" data-v="1">Always</button>
+        <button class="ob" onclick="sel(this,'loc')" data-v="0.5">Sometimes</button>
+        <button class="ob" onclick="sel(this,'loc')" data-v="0">Never</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Quantitative · 03</div>
+      <div class="qtext">Do you cover your camera?</div>
+      <div class="opts">
+        <button class="ob" onclick="sel(this,'cam')" data-v="1">Yes</button>
+        <button class="ob on" onclick="sel(this,'cam')" data-v="0">No</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Quantitative · 04</div>
+      <div class="qtext">Number of social media apps</div>
+      <input type="range" min="0" max="12" value="3" step="1" id="socialApps" oninput="upR('socialApps','sav');go()">
+      <div class="rv"><span id="sav">3</span> apps</div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Quantitative · 05</div>
+      <div class="qtext">Comfort level being surveilled (1–10)</div>
+      <input type="range" min="1" max="10" value="5" step="1" id="comfort" oninput="upR('comfort','cfv');go()">
+      <div class="rv"><span id="cfv">5</span> / 10</div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Behavioral · 01</div>
+      <div class="qtext">Have you ever changed your behavior because you felt watched?</div>
+      <div class="opts">
+        <button class="ob" onclick="sel(this,'bh1')" data-v="1">Yes</button>
+        <button class="ob on" onclick="sel(this,'bh1')" data-v="0">No</button>
+        <button class="ob" onclick="sel(this,'bh1')" data-v="0.5">Sometimes</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Behavioral · 02</div>
+      <div class="qtext">Do you act differently online vs offline?</div>
+      <div class="opts">
+        <button class="ob" onclick="sel(this,'bh2')" data-v="1">Yes</button>
+        <button class="ob on" onclick="sel(this,'bh2')" data-v="0">No</button>
+        <button class="ob" onclick="sel(this,'bh2')" data-v="0.5">Somewhat</button>
+      </div>
+    </div>
+    <div class="qb">
+      <div class="qlabel">Emotional · Response</div>
+      <div class="qtext">How does surveillance make you feel?</div>
+      <div class="opts">
+        <button class="ob" onclick="tog(this,'watched')">Watched</button>
+        <button class="ob" onclick="tog(this,'safe')">Safe</button>
+        <button class="ob" onclick="tog(this,'anxious')">Anxious</button>
+        <button class="ob" onclick="tog(this,'indifferent')">Indifferent</button>
+        <button class="ob" onclick="tog(this,'exposed')">Exposed</button>
+        <button class="ob" onclick="tog(this,'controlled')">Controlled</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel-right">
+    <div class="image-area" id="imageArea">
+      <div class="fbox-placeholder" id="ph">
+        <div style="font-size:11px;color:#bbb;margin-bottom:8px">Camera off</div>
+        <button class="capbtn" onclick="startCam()">Start Live Camera</button>
+      </div>
+      <video id="videoEl" autoplay muted playsinline></video>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="mainCanvas"></canvas>
+        <canvas id="numCanvas"></canvas>
+      </div>
+      <div id="flashEl"></div>
+      <div class="btn-row">
+        <button class="capbtn" id="captureBtn" onclick="captureScreenshot()" style="display:none">Capture</button>
+        <button class="capbtn outline" id="stopBtn" onclick="stopCam()" style="display:none">Stop</button>
+      </div>
+      <div class="status-bar" id="statusMsg"></div>
+    </div>
+
+    <!-- meters removed — shown as overlay text on image -->
+    <div id="pdisp" style="display:none"></div>
+    <div id="fdisp" style="display:none"></div>
+    <div id="pbar" style="display:none"></div>
+    <div id="fbar" style="display:none"></div>
+    <div id="readout" style="display:none"></div>
+  </div>
+</div>
+<!-- ABOUT MODAL -->
+<div id="aboutModal" class="about-modal">
+  <div class="about-box">
+
+    <button class="about-close" onclick="closeAbout()">×</button>
+
+    <!-- <div class="about-title">ABOUT THE PROJECT</div> -->
+
+    <div class="about-text">
+      SURVEILLED is an interactive system that visualizes the psychological
+      effects of digital surveillance through live camera distortion,
+      behavioral inputs, and algorithmic analysis.
+
+      <br><br>
+
+      The interface translates personal habits, emotional responses,
+      and online behaviors into a speculative surveillance profile.
+      As participants answer questions, the live image becomes increasingly
+      fragmented, scanned, and quantified — reflecting how contemporary
+      systems observe, categorize, and reconstruct identity.
+
+      <br><br>
+
+      The project explores paranoia, visibility, fear, consent,
+      and the unstable relationship between humans and machine vision
+      in an era dominated by data extraction and artificial intelligence.
+    </div>
+
+  </div>
+</div>
+
+<canvas id="segCanvas" style="display:none"></canvas>
+<canvas id="grabCanvas" style="display:none"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+<script>
+const S={phoneHours:4,loc:1,cam:0,socialApps:3,comfort:5,bh1:0,bh2:0,words:new Set(),P:0,F:0};
+
+// ── Numbers 1–9 + symbols, mapped dark→light ──
+// One char per pixel-block — drawn large = always legible when zoomed
+const RAMP=[
+  '%','&','@','#','8','9','6','=','+','?',  // 0–9  very dark
+  '4','3','5','7','2','1','9','6','%','@',  // 10–19 mid-dark
+  '#','8','=','+','?','3','5','7','2','1',  // 20–29 mid
+  '4','6','9','1'                           // 30–33 lightest
+];
+
+// ── Thermal color palette ──
+const THERMAL=[
+  [0,   [10,0,20]],
+  [0.08,[40,0,80]],
+  [0.18,[100,0,180]],
+  [0.30,[180,0,220]],
+  [0.42,[220,20,160]],
+  [0.54,[255,0,100]],
+  [0.64,[255,60,0]],
+  [0.74,[255,140,0]],
+  [0.84,[255,210,0]],
+  [0.93,[255,240,80]],
+  [1.0, [255,255,200]],
+];
+function thermalColor(t){
+  t=Math.max(0,Math.min(1,t));
+  let lo=THERMAL[0],hi=THERMAL[THERMAL.length-1];
+  for(let i=0;i<THERMAL.length-1;i++){
+    if(t>=THERMAL[i][0]&&t<=THERMAL[i+1][0]){lo=THERMAL[i];hi=THERMAL[i+1];break;}
+  }
+  const span=hi[0]-lo[0]||1;
+  const f=(t-lo[0])/span;
+  return[
+    Math.round(lo[1][0]+(hi[1][0]-lo[1][0])*f),
+    Math.round(lo[1][1]+(hi[1][1]-lo[1][1])*f),
+    Math.round(lo[1][2]+(hi[1][2]-lo[1][2])*f),
+  ];
+}
+
+const CELL=4; // grid sampling cell — numbers rendered at block size for crispness
+
+let stream=null,isLive=false,animId=null;
+let camW=0,camH=0;
+let personMask=null;
+let segReady=false,selfieSegmentation=null;
+let segBusy=false;
+
+const videoEl    =document.getElementById('videoEl');
+const mainCanvas =document.getElementById('mainCanvas');
+const numCanvas  =document.getElementById('numCanvas');
+const grabCanvas =document.getElementById('grabCanvas');
+const segCanvas  =document.getElementById('segCanvas');
+const canvasWrap =document.getElementById('canvasWrap');
+const flashEl    =document.getElementById('flashEl');
+const ctx        =mainCanvas.getContext('2d',{willReadFrequently:true});
+const numCtx     =numCanvas.getContext('2d');
+const grabCtx    =grabCanvas.getContext('2d',{willReadFrequently:true});
+const segCtx     =segCanvas.getContext('2d',{willReadFrequently:true});
+
+// ── MediaPipe ──
+function initSeg(){
+  return new Promise((resolve,reject)=>{
+    try{
+      selfieSegmentation=new SelfieSegmentation({
+        locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`
+      });
+      selfieSegmentation.setOptions({modelSelection:1});
+      selfieSegmentation.onResults(onSegResults);
+      selfieSegmentation.initialize().then(()=>{segReady=true;resolve();}).catch(reject);
+    }catch(e){reject(e);}
+  });
+}
+function onSegResults(results){
+  const mask=results.segmentationMask;
+  const mW=mask.width,mH=mask.height;
+  segCanvas.width=mW;segCanvas.height=mH;
+  segCtx.drawImage(mask,0,0,mW,mH);
+  const md=segCtx.getImageData(0,0,mW,mH).data;
+  const m=new Float32Array(camW*camH);
+  for(let y=0;y<camH;y++) for(let x=0;x<camW;x++){
+    const mx=Math.min(mW-1,Math.round(x*mW/camW));
+    const my=Math.min(mH-1,Math.round(y*mH/camH));
+    m[y*camW+x]=md[(my*mW+mx)*4]/255;
+  }
+  personMask=m;
+  segBusy=false;
+}
+async function sendFrameToSeg(){
+  if(!segReady||segBusy) return;
+  segBusy=true;
+  grabCtx.save();
+  grabCtx.translate(camW,0);grabCtx.scale(-1,1);
+  grabCtx.drawImage(videoEl,0,0,camW,camH);
+  grabCtx.restore();
+  try{ await selfieSegmentation.send({image:grabCanvas}); }
+  catch(e){ segBusy=false; }
+}
+
+function upR(id,vid){S[id]=+document.getElementById(id).value;document.getElementById(vid).textContent=S[id];}
+function sel(btn,g){btn.closest('.opts').querySelectorAll('.ob').forEach(b=>b.classList.remove('on'));btn.classList.add('on');S[g]=+btn.dataset.v;go();}
+function tog(btn,w){btn.classList.toggle('on');S.words.has(w)?S.words.delete(w):S.words.add(w);go();}
+
+function go(){
+  let p=0;
+  p+=(S.phoneHours/16)*10;p+=S.cam*15;p+=((10-S.comfort)/9)*15;
+  p+=(S.socialApps/12)*8;p+=(1-S.loc)*7;p+=S.bh1*12;p+=S.bh2*8;
+  p=Math.min(100,Math.max(0,p));
+  let f=0;
+  if(S.words.has('anxious'))f+=25;if(S.words.has('exposed'))f+=20;
+  if(S.words.has('controlled'))f+=22;if(S.words.has('watched'))f+=10;
+  if(S.words.has('indifferent'))f+=2;if(S.words.has('safe'))f-=15;
+  f+=S.bh1*10+S.bh2*6;f+=((10-S.comfort)/9)*12;
+  f=Math.min(100,Math.max(0,f));
+  S.P=Math.round(p);S.F=Math.round(f);
+  updateUI();
+}
+function updateUI(){
+  const p=S.P,f=S.F;
+  document.getElementById('pdisp').innerHTML=p+'<span style="font-size:14px">%</span>';
+  document.getElementById('fdisp').innerHTML=f+'<span style="font-size:14px">%</span>';
+  document.getElementById('pbar').style.width=p+'%';
+  document.getElementById('fbar').style.width=f+'%';
+  let prof,risk;
+  if(p<15){prof='Compliant · Unaware';risk='Minimal';}
+  else if(p<35){prof='Passive · Aware';risk='Low';}
+  else if(p<55){prof='Cautious · Alert';risk='Moderate';}
+  else if(p<75){prof='Resistant · Fearful';risk='Elevated';}
+  else{prof='Hypervigilant · Paranoid';risk='Critical';}
+  document.getElementById('readout').innerHTML=
+    'Profile: '+prof+'<br>Risk level: '+risk+'<br>'+
+    'Paranoia: '+p+'%  ·  Fear: '+f+'%<br>'+
+    'Behavioral flags: '+((S.bh1>0?1:0)+(S.bh2>0?1:0))+'<br>'+
+    'Emotional markers: '+S.words.size;
+}
+
+async function startCam(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false
+    });
+    videoEl.srcObject=stream;
+    await new Promise(r=>videoEl.onloadedmetadata=r);
+    videoEl.play();
+    camW=videoEl.videoWidth||640;
+    camH=videoEl.videoHeight||480;
+    // mainCanvas matches video native resolution for quality
+    mainCanvas.width=camW;mainCanvas.height=camH;
+    grabCanvas.width=camW;grabCanvas.height=camH;
+    // numCanvas sized to actual display pixels (device pixel ratio aware) — prevents blur
+    resizeNumCanvas();
+    document.getElementById('ph').style.display='none';
+    canvasWrap.style.display='block';
+    document.getElementById('captureBtn').style.display='';
+    document.getElementById('stopBtn').style.display='';
+    document.getElementById('statusMsg').textContent='Initialising…';
+    if(!segReady) await initSeg();
+    await sendFrameToSeg();
+    document.getElementById('statusMsg').textContent='';
+    isLive=true;
+    loop();
+  }catch(e){
+    document.getElementById('statusMsg').textContent='Camera access denied';
+  }
+}
+
+function stopCam(){
+  isLive=false;
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  canvasWrap.style.display='none';
+  document.getElementById('captureBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='none';
+  document.getElementById('statusMsg').textContent='';
+  const ph=document.getElementById('ph');
+  ph.style.display='flex';
+  ph.innerHTML='<div style="font-size:11px;color:#bbb;margin-bottom:8px">Camera off</div><button class="capbtn" onclick="startCam()">Start Live Camera</button>';
+  ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
+  numCtx.clearRect(0,0,numCanvas.width,numCanvas.height);
+  personMask=null;
+}
+
+// ── Screenshot capture ──
+function captureScreenshot(){
+
+  // visible canvas size on screen
+  const rect=mainCanvas.getBoundingClientRect();
+
+  const exportCanvas=document.createElement('canvas');
+  exportCanvas.width=rect.width;
+  exportCanvas.height=rect.height;
+
+  const exportCtx=exportCanvas.getContext('2d');
+
+  // draw processed camera image exactly as displayed
+  exportCtx.drawImage(
+    mainCanvas,
+    0,0,mainCanvas.width,mainCanvas.height,
+    0,0,rect.width,rect.height
+  );
+
+  // draw overlay canvas exactly as displayed
+  exportCtx.drawImage(
+    numCanvas,
+    0,0,numCanvas.width,numCanvas.height,
+    0,0,rect.width,rect.height
+  );
+
+  // flash effect
+  flashEl.style.opacity='0.7';
+
+  setTimeout(()=>{
+    flashEl.style.transition='opacity 0.4s';
+    flashEl.style.opacity='0';
+  },80);
+
+  setTimeout(()=>{
+    flashEl.style.transition='';
+  },500);
+
+  // download
+  const link=document.createElement('a');
+
+  link.download=`surveilled_${Date.now()}.png`;
+
+  link.href=exportCanvas.toDataURL('image/png');
+
+  link.click();
+}
+
+let frameCount=0;
+function loop(){
+  if(!isLive) return;
+  animId=requestAnimationFrame(loop);
+  frameCount++;
+  if(frameCount%3===0) sendFrameToSeg();
+  renderFrame();
+}
+
+function renderFrame(){
+  if(!isLive||videoEl.readyState<2) return;
+  const W=camW,H=camH;
+
+  // Grab mirrored frame
+  grabCtx.save();
+  grabCtx.translate(W,0);grabCtx.scale(-1,1);
+  grabCtx.drawImage(videoEl,0,0,W,H);
+  grabCtx.restore();
+  const frameData=grabCtx.getImageData(0,0,W,H);
+  const d=frameData.data;
+
+  const blockSize=Math.max(2,Math.round((S.P/100)*50));
+  const fearRatio=S.F/100;
+  const hasMask=!!personMask;
+  const hasBlocks=blockSize>2&&hasMask;
+
+  let bCols=0,bRows=0;
+  let blockActive=null,blockAvgR=null,blockAvgG=null,blockAvgB=null;
+
+  if(hasBlocks){
+    bCols=Math.ceil(W/blockSize);bRows=Math.ceil(H/blockSize);
+    const bR=new Float32Array(bCols*bRows),bG=new Float32Array(bCols*bRows);
+    const bB=new Float32Array(bCols*bRows),bN=new Float32Array(bCols*bRows);
+
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const m=personMask[y*W+x];if(m<0.3)continue;
+      const bi=Math.floor(y/blockSize)*bCols+Math.floor(x/blockSize);
+      const pi=(y*W+x)*4;
+      bR[bi]+=d[pi]*m;bG[bi]+=d[pi+1]*m;bB[bi]+=d[pi+2]*m;bN[bi]+=m;
+    }
+    blockActive=new Uint8Array(bCols*bRows);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++)
+      if(personMask[y*W+x]>=0.3)
+        blockActive[Math.floor(y/blockSize)*bCols+Math.floor(x/blockSize)]=1;
+
+    blockAvgR=new Uint8Array(bCols*bRows);
+    blockAvgG=new Uint8Array(bCols*bRows);
+    blockAvgB=new Uint8Array(bCols*bRows);
+    for(let bi=0;bi<bCols*bRows;bi++){
+      if(!blockActive[bi]||bN[bi]===0)continue;
+      blockAvgR[bi]=Math.round(bR[bi]/bN[bi]);
+      blockAvgG[bi]=Math.round(bG[bi]/bN[bi]);
+      blockAvgB[bi]=Math.round(bB[bi]/bN[bi]);
+    }
+
+    const out=new ImageData(new Uint8ClampedArray(d),W,H);
+    const dst=out.data;
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const bi=Math.floor(y/blockSize)*bCols+Math.floor(x/blockSize);
+      if(!blockActive[bi])continue;
+      const n=bN[bi];if(n===0)continue;
+      const pi=(y*W+x)*4;
+      dst[pi]=blockAvgR[bi];dst[pi+1]=blockAvgG[bi];dst[pi+2]=blockAvgB[bi];dst[pi+3]=255;
+    }
+    ctx.putImageData(out,0,0);
+  } else {
+    ctx.putImageData(frameData,0,0);
+  }
+
+  // ── Number overlay ──
+resizeNumCanvas();
+
+const dispW=numCanvas.getBoundingClientRect().width||W;
+const dispH=numCanvas.getBoundingClientRect().height||H;
+
+const scX=dispW/W;
+const scY=dispH/H;
+
+numCtx.clearRect(0,0,dispW,dispH);
+
+if(fearRatio>0&&hasMask){
+
+  // smaller dense grid like second code
+  const cellSize=CELL;
+
+  const fs=Math.max(5,cellSize*scX+1);
+
+  numCtx.font=`bold ${fs}px 'Courier New', monospace`;
+  numCtx.textBaseline='top';
+  numCtx.textAlign='left';
+
+  const cCols=Math.ceil(W/cellSize);
+  const cRows=Math.ceil(H/cellSize);
+
+  const calls=[];
+
+  for(let cr=0;cr<cRows;cr++){
+    for(let cc=0;cc<cCols;cc++){
+
+      const px=cc*cellSize;
+      const py=cr*cellSize;
+
+      const cpx=Math.min(W-1,px+Math.floor(cellSize/2));
+      const cpy=Math.min(H-1,py+Math.floor(cellSize/2));
+
+      // only numbers on segmented person
+      if(personMask[cpy*W+cpx]<0.3) continue;
+
+      // density controlled by fear
+      const hash=((cc*2654435761)^(cr*2246822519))>>>0;
+      if((hash>>>0)/4294967295>fearRatio) continue;
+
+      const pi2=(cpy*W+cpx)*4;
+
+      const luma=(
+        0.299*d[pi2]+
+        0.587*d[pi2+1]+
+        0.114*d[pi2+2]
+      )/255;
+
+      // luma → character
+      const idx=Math.min(
+        RAMP.length-1,
+        Math.floor(luma*RAMP.length)
+      );
+
+      const char=RAMP[idx];
+
+      // thermal color
+      const [tr,tg,tb]=thermalColor(luma);
+
+      let clipX,clipY,clipW,clipH,biKey;
+
+      // keep clipping aligned with paranoia pixel blocks
+      if(hasBlocks){
+
+        const bi=
+          Math.floor(cpy/blockSize)*bCols+
+          Math.floor(cpx/blockSize);
+
+        if(!blockActive[bi]) continue;
+
+        clipX=Math.floor(cpx/blockSize)*blockSize*scX;
+        clipY=Math.floor(cpy/blockSize)*blockSize*scY;
+
+        clipW=Math.min(
+          blockSize*scX,
+          dispW-clipX
+        );
+
+        clipH=Math.min(
+          blockSize*scY,
+          dispH-clipY
+        );
+
+        biKey=bi;
+
+      } else {
+
+        clipX=px*scX;
+        clipY=py*scY;
+
+        clipW=cellSize*scX;
+        clipH=cellSize*scY;
+
+        biKey=cr*cCols+cc;
+      }
+
+      calls.push({
+        char,
+        px:px*scX,
+        py:py*scY,
+        tr,tg,tb,
+        clipX,clipY,
+        clipW,clipH,
+        biKey
+      });
+    }
+  }
+
+  // draw grouped by clip region
+  calls.sort((a,b)=>a.biKey-b.biKey);
+
+  let lastKey=-1;
+
+  for(const c of calls){
+
+    if(c.biKey!==lastKey){
+
+      if(lastKey!==-1) numCtx.restore();
+
+      numCtx.save();
+
+      numCtx.beginPath();
+      numCtx.rect(
+        c.clipX,
+        c.clipY,
+        c.clipW,
+        c.clipH
+      );
+
+      numCtx.clip();
+
+      lastKey=c.biKey;
+    }
+
+    numCtx.globalAlpha=0.95;
+
+    numCtx.fillStyle=
+      `rgb(${c.tr},${c.tg},${c.tb})`;
+
+    numCtx.fillText(
+      c.char,
+      c.px,
+      c.py
+    );
+  }
+
+  if(lastKey!==-1) numCtx.restore();
+}
+
+    // ── Overlay text — thermal scan style, no boxes, plain spaced uppercase ──
+  numCtx.globalAlpha=1.0;
+  numCtx.textBaseline='top';
+  numCtx.textAlign='left';
+  const FS=11, LH2=18, M=18;
+  numCtx.font=`${FS}px 'Courier New',monospace`;
+
+  // Profile classification
+  let prof,risk;
+  if(S.P<15){prof='COMPLIANT · UNAWARE';risk='MINIMAL';}
+  else if(S.P<35){prof='PASSIVE · AWARE';risk='LOW';}
+  else if(S.P<55){prof='CAUTIOUS · ALERT';risk='MODERATE';}
+  else if(S.P<75){prof='RESISTANT · FEARFUL';risk='ELEVATED';}
+  else{prof='HYPERVIGILANT · PARANOID';risk='CRITICAL';}
+
+  // Now gets the time for the live feed label
+  const now=new Date();
+  const timeStr='TIME: '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+
+  // ── TOP BAR — one line across the top like thermal camera HUD ──
+  // Semi-transparent dark strip
+  numCtx.fillStyle='rgba(0,0,0,0.55)';
+  numCtx.fillRect(0,0,dispW,LH2+M);
+
+  numCtx.fillStyle='#e8e4c8';
+  // Left: label
+  numCtx.textAlign='left';
+  numCtx.fillText('SURVEILLANCE SCAN',M,M*0.5);
+
+  // Center: cam label
+//   numCtx.textAlign='center';
+//   numCtx.fillText('CAM I',dispW/2,M*0.5);
+
+  // Right: time
+  numCtx.textAlign='right';
+  numCtx.fillText(timeStr,dispW-M,M*0.5);
+
+  // ── BOTTOM BAR — paranoia / fear / profile ──
+  numCtx.fillStyle='rgba(0,0,0,0.55)';
+  numCtx.fillRect(0,dispH-LH2-M,dispW,LH2+M);
+
+  numCtx.fillStyle='#e8e4c8';
+  numCtx.textAlign='left';
+  numCtx.fillText('PARANOIA  '+S.P+'%',M,dispH-LH2-M*0.5);
+
+  numCtx.textAlign='center';
+  numCtx.fillText(prof,dispW/2,dispH-LH2-M*0.5);
+
+  numCtx.textAlign='right';
+  numCtx.fillText('FEAR  '+S.F+'%',dispW-M,dispH-LH2-M*0.5);
+}
+
+// Size numCanvas to exact display pixels — critical for sharp text/numbers
+function resizeNumCanvas(){
+  const rect=numCanvas.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  const w=Math.round(rect.width*dpr);
+  const h=Math.round(rect.height*dpr);
+  if(numCanvas.width===w&&numCanvas.height===h) return;
+  numCanvas.width=w;
+  numCanvas.height=h;
+  // Scale context so 1 logical unit = 1 physical pixel
+  numCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize',resizeNumCanvas);
+
+go();
+initSeg().catch(()=>{});
+function openAbout(){
+  document.getElementById('aboutModal').classList.add('show');
+}
+
+function closeAbout(){
+  document.getElementById('aboutModal').classList.remove('show');
+}
+
+// optional: click outside to close
+document.getElementById('aboutModal').addEventListener('click',e=>{
+  if(e.target.id==='aboutModal'){
+    closeAbout();
+  }
+});
+</script>
+</body>
+</html>
