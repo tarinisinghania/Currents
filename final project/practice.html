@@ -182,10 +182,13 @@ button:active{
 
   <div class="controls">
     <button onclick="startCamera()">START</button>
+    <button onclick="stopCamera()">STOP</button>
     <button onclick="capture()">CAPTURE</button>
   </div>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
 
 <script>
 
@@ -199,35 +202,135 @@ const octx=overlay.getContext('2d');
 
 const flash=document.getElementById('flash');
 
+let stream=null;
+let running=false;
+
 let w=0;
 let h=0;
 
+const PIXEL=75;
 const CELL=3;
-const PIXEL=85;
 
 const CHARS=[
-'@','#','%','8','9','6','5','4','3','2','1','0'
+'@','#','%','8','9','6','5','4','3','2','1'
 ];
 
 function thermal(v){
 
-  if(v<0.15) return [30,0,60];
-  if(v<0.25) return [80,0,140];
-  if(v<0.35) return [160,0,200];
-  if(v<0.45) return [255,0,180];
-  if(v<0.55) return [255,0,80];
-  if(v<0.65) return [255,60,0];
-  if(v<0.75) return [255,140,0];
-  if(v<0.85) return [255,210,0];
+  if(v<0.15) return [20,0,40];
+  if(v<0.25) return [80,0,160];
+  if(v<0.35) return [180,0,220];
+  if(v<0.45) return [255,0,150];
+  if(v<0.55) return [255,0,60];
+  if(v<0.65) return [255,80,0];
+  if(v<0.75) return [255,160,0];
+  if(v<0.85) return [255,220,0];
 
-  return [255,255,180];
+  return [255,255,200];
 }
 
-async function startCamera(){
+/* SEGMENTATION */
+
+let selfieSegmentation;
+let personMask=null;
+let segReady=false;
+let segBusy=false;
+
+async function initSegmentation(){
+
+  selfieSegmentation=new SelfieSegmentation({
+    locateFile:(file)=>{
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+    }
+  });
+
+  selfieSegmentation.setOptions({
+    modelSelection:1
+  });
+
+  selfieSegmentation.onResults(onResults);
+
+  await selfieSegmentation.initialize();
+
+  segReady=true;
+}
+
+function onResults(results){
+
+  const maskCanvas=document.createElement('canvas');
+
+  maskCanvas.width=results.segmentationMask.width;
+  maskCanvas.height=results.segmentationMask.height;
+
+  const mctx=maskCanvas.getContext('2d');
+
+  mctx.drawImage(
+    results.segmentationMask,
+    0,
+    0
+  );
+
+  const md=mctx.getImageData(
+    0,
+    0,
+    maskCanvas.width,
+    maskCanvas.height
+  ).data;
+
+  const arr=new Float32Array(w*h);
+
+  for(let y=0;y<h;y++){
+
+    for(let x=0;x<w;x++){
+
+      const mx=Math.floor(
+        x*maskCanvas.width/w
+      );
+
+      const my=Math.floor(
+        y*maskCanvas.height/h
+      );
+
+      arr[y*w+x]=
+        md[(my*maskCanvas.width+mx)*4]/255;
+    }
+  }
+
+  personMask=arr;
+
+  segBusy=false;
+}
+
+async function sendToSegmentation(){
+
+  if(!segReady) return;
+
+  if(segBusy) return;
+
+  segBusy=true;
 
   try{
 
-    const stream=await navigator.mediaDevices.getUserMedia({
+    await selfieSegmentation.send({
+      image:video
+    });
+
+  }catch(err){
+
+    segBusy=false;
+
+  }
+}
+
+/* CAMERA */
+
+async function startCamera(){
+
+  if(running) return;
+
+  try{
+
+    stream=await navigator.mediaDevices.getUserMedia({
       video:{
         facingMode:{
           ideal:'environment'
@@ -255,6 +358,14 @@ async function startCamera(){
     overlay.width=w;
     overlay.height=h;
 
+    if(!segReady){
+
+      await initSegmentation();
+
+    }
+
+    running=true;
+
     loop();
 
   }catch(err){
@@ -264,64 +375,135 @@ async function startCamera(){
   }
 }
 
+function stopCamera(){
+
+  running=false;
+
+  if(stream){
+
+    stream.getTracks().forEach(track=>{
+      track.stop();
+    });
+
+    stream=null;
+  }
+
+  ctx.clearRect(0,0,w,h);
+  octx.clearRect(0,0,w,h);
+
+  personMask=null;
+}
+
+/* LOOP */
+
+let frame=0;
+
 function loop(){
+
+  if(!running) return;
 
   requestAnimationFrame(loop);
 
   if(video.readyState<2) return;
 
+  frame++;
+
+  if(frame%3===0){
+
+    sendToSegmentation();
+
+  }
+
+  render();
+}
+
+function render(){
+
   ctx.drawImage(video,0,0,w,h);
 
-  let frame=ctx.getImageData(0,0,w,h);
+  const img=ctx.getImageData(0,0,w,h);
 
-  let d=frame.data;
+  const d=img.data;
 
-  // MASSIVE PIXELATION
+  if(personMask){
 
-  for(let y=0;y<h;y+=PIXEL){
+    /* PIXELATE ONLY PERSON */
 
-    for(let x=0;x<w;x+=PIXEL){
+    for(let y=0;y<h;y+=PIXEL){
 
-      let i=(y*w+x)*4;
+      for(let x=0;x<w;x+=PIXEL){
 
-      let r=d[i];
-      let g=d[i+1];
-      let b=d[i+2];
+        let found=false;
 
-      for(let yy=0;yy<PIXEL;yy++){
+        for(let yy=0;yy<PIXEL&&!found;yy++){
 
-        for(let xx=0;xx<PIXEL;xx++){
+          for(let xx=0;xx<PIXEL;xx++){
 
-          let px=x+xx;
-          let py=y+yy;
+            const px=x+xx;
+            const py=y+yy;
 
-          if(px>=w||py>=h) continue;
+            if(px>=w||py>=h) continue;
 
-          let ni=(py*w+px)*4;
+            if(personMask[py*w+px]>0.35){
 
-          d[ni]=r;
-          d[ni+1]=g;
-          d[ni+2]=b;
+              found=true;
+              break;
+            }
+          }
+        }
+
+        if(!found) continue;
+
+        const i=(y*w+x)*4;
+
+        const r=d[i];
+        const g=d[i+1];
+        const b=d[i+2];
+
+        for(let yy=0;yy<PIXEL;yy++){
+
+          for(let xx=0;xx<PIXEL;xx++){
+
+            const px=x+xx;
+            const py=y+yy;
+
+            if(px>=w||py>=h) continue;
+
+            if(personMask[py*w+px]<0.35) continue;
+
+            const ni=(py*w+px)*4;
+
+            d[ni]=r;
+            d[ni+1]=g;
+            d[ni+2]=b;
+          }
         }
       }
     }
   }
 
-  ctx.putImageData(frame,0,0);
+  ctx.putImageData(img,0,0);
 
   drawNumbers(d);
 }
+
+/* THERMAL NUMBERS */
 
 function drawNumbers(d){
 
   octx.clearRect(0,0,w,h);
 
+  if(!personMask) return;
+
   octx.font='bold 11px Courier New';
+
   octx.textBaseline='top';
 
   for(let y=0;y<h;y+=CELL){
 
     for(let x=0;x<w;x+=CELL){
+
+      if(personMask[y*w+x]<0.35) continue;
 
       const i=(y*w+x)*4;
 
@@ -337,7 +519,9 @@ function drawNumbers(d){
 
       const char=
         CHARS[
-          Math.floor(luma*(CHARS.length-1))
+          Math.floor(
+            luma*(CHARS.length-1)
+          )
         ];
 
       const [tr,tg,tb]=thermal(luma);
@@ -350,6 +534,8 @@ function drawNumbers(d){
   }
 }
 
+/* CAPTURE */
+
 function capture(){
 
   const exportCanvas=document.createElement('canvas');
@@ -360,13 +546,17 @@ function capture(){
   const ex=exportCanvas.getContext('2d');
 
   ex.drawImage(canvas,0,0);
+
   ex.drawImage(overlay,0,0);
 
   flash.style.opacity='0.8';
 
   setTimeout(()=>{
+
     flash.style.transition='opacity 0.4s';
+
     flash.style.opacity='0';
+
   },50);
 
   const a=document.createElement('a');
@@ -377,6 +567,8 @@ function capture(){
 
   a.click();
 }
+
+/* CLOCK */
 
 function updateTime(){
 
